@@ -92,23 +92,24 @@ while [ -n "$1" ]; do
 done
 
 # Current Dir check
-if [ ${DIR} == "." ]; then
-  echo "Working over current directory"
+if [ "${DIR}" == "." ]; then
   DIR="`pwd`"
   echo "${DIR}"
-else
-  echo "Working over directory - ${DIR}"
 fi
 
 # Check unrar is available
 if ! type -P unrar >/dev/null; then
   echo "Please install unrar or check your \$PATH" 2>&1
-  exit 0
+  exit 1;
 fi
 
-# Check $1 exists and is a directory
+# Check $DIR exists and is a directory
 if [ -d "$DIR" ]; then
   DIR="`pwd`"
+  echo "Working over directory - ${DIR}"
+else
+  echo "Cannot find directory \"${DIR}\"" 2>&1
+  exit 1;
 fi
 
 # Check if there is an "unrar" running already, if so, exit

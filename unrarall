@@ -20,22 +20,23 @@
 # Set some defaults
 declare -x DIR="`pwd`"
 declare -x CLEAN=false
-declare -rx UNRARALL_VERSION="0.1"
+declare -rx UNRARALL_VERSION="0.2"
 
 function usage() 
 {
-  echo "Usage: unrarall -d <dir> -c -h -v
+  echo "Usage: unrarall -d <dir> [-c | --clean] [-f | --force] [-v | --version]
+               unrarall [-h | --help]
 
 DESCRIPTON
-unrarall is a utility to unrar and cleanup all files within a directory. Use -c if you want to cleanup. Otherwise no cleaning is done. 
+unrarall is a utility to unrar and cleanup (delete) all files within a directory. Use -c if you want to cleanup. Otherwise no cleaning is done. 
 
 OPTIONS
 
--h Displays this help message and exits.
--c Clean after unrar
--d Specify directory. Otherwise 'pwd' is used
--f force clean. Even if unrar fails, clean. Implies -c
--v give version information version
+-h, --help    Displays this help message and exits.
+-c, --clean   Clean after unrar
+-d, --dir     Specify directory. Otherwise 'pwd' is used
+-f, --force   Force clean. Even if unrar fails, clean. Implies -c
+-v, --version Give version information version
 
 LICENSE
 COPYRIGHT (C) 2011 Brendan Le Foll
@@ -59,26 +60,35 @@ ACKNOWLEDGEMENTS: Name and idea comes from "jeremy" see - http://askubuntu.com/q
 }
 
 # Parse command line arguments
-while getopts hfvcd: o; do
-  case "$o" in
-    h)  usage	
+while [ -n "$1" ]; do
+  case "$1" in
+    -h | --help )  
+    	usage	
         exit 0
         ;;
-    v)  echo "$UNRARALL_VERSION"
+    -v | --version )  
+    	echo "$UNRARALL_VERSION"
         exit 0
         ;;
-    d)  DIR="$OPTARG"
+    -d | --dir )  
+    	shift
+	DIR="$1"
         ;;
-    c)  CLEAN=true
+    -c | --clean )  
+    	CLEAN=true
         ;;
-    f)  FORCE_CLEAN=1
+    -f | --force )  
+    	FORCE_CLEAN=1
         CLEAN=true
         ;;
-    \?)	# getopts issues an error message
-        echo $USAGE >&2
+    *)	
+    	# user issued unrecognised option
+	echo -e "Unrecognised option: $1 \n"
+        usage
         exit 1
         ;;
   esac
+  shift
 done
 
 # Current Dir check
@@ -92,7 +102,7 @@ fi
 
 # Check unrar is available
 if ! type -P unrar >/dev/null; then
-  echo "Please install unrar or check your \$PATH"
+  echo "Please install unrar or check your \$PATH" 2>&1
   exit 0
 fi
 
@@ -112,11 +122,11 @@ CURRENT_DIR=`pwd`
 #find all files 
 COUNT=0
 COMMAND="find "$DIR" -name *.rar"
-#modify IFS for new lines
-O=$IFS
+
+#modify IFS for new lines so filenames with spaces do not get split
+IFS_TEMP=$IFS
 IFS=$(echo -en "\n\b")
-#echo $COMMAND
-#echo "find $DIR -name "*.rar""
+
 for file in `find "$DIR" -name *.rar`; do
   let COUNT=COUNT+1
   echo $file
@@ -144,7 +154,7 @@ for file in `find "$DIR" -name *.rar`; do
   fi
   cd "$CURRENT_DIR"
 done
-IFS=$O
+IFS=$IFS_TEMP
 
 #If success
 if [ "$COUNT" -ne "0" ]; then

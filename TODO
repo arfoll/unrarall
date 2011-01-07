@@ -5,6 +5,3 @@ Capable of using unrar or rar if unrar is not available on the system
 
 Implement as hook to iscp
 
-== Future developments ==
-
-Support long options - use getop or shflags? - http://code.google.com/p/shflags/

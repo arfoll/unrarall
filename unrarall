@@ -1,0 +1,158 @@
+#!/bin/bash
+
+#unrarall
+# Copyright (C) 2011 Brendan Le Foll - brendan@fridu.net
+#
+# This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+##########################################################################
+
+# Set some defaults
+declare -x DIR="`pwd`"
+declare -x CLEAN=false
+declare -rx UNRARALL_VERSION="0.1"
+
+function usage() 
+{
+  echo "Usage: unrarall -d <dir> -c -h -v
+
+DESCRIPTON
+unrarall is a utility to unrar and cleanup all files within a directory. Use -c if you want to cleanup. Otherwise no cleaning is done. 
+
+OPTIONS
+
+-h Displays this help message and exits.
+-c Clean after unrar
+-d Specify directory. Otherwise 'pwd' is used
+-f force clean. Even if unrar fails, clean. Implies -c
+-v give version information version
+
+LICENSE
+COPYRIGHT (C) 2011 Brendan Le Foll
+This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+VERSION: $UNRARALL_VERSION
+
+ACKNOWLEDGEMENTS: Name and idea comes from "jeremy" see - http://askubuntu.com/questions/7059/script-app-to-unrar-files-and-only-delete-the-archives-which-were-sucessfully 
+"
+}
+
+# Parse command line arguments
+while getopts hfvcd: o; do
+  case "$o" in
+    h)  usage	
+        exit 0
+        ;;
+    v)  echo "$UNRARALL_VERSION"
+        exit 0
+        ;;
+    d)  DIR="$OPTARG"
+        ;;
+    c)  CLEAN=true
+        ;;
+    f)  FORCE_CLEAN=1
+        CLEAN=true
+        ;;
+    \?)	# getopts issues an error message
+        echo $USAGE >&2
+        exit 1
+        ;;
+  esac
+done
+
+# Current Dir check
+if [ ${DIR} == "." ]; then
+  echo "Working over current directory"
+  DIR="`pwd`"
+  echo "${DIR}"
+else
+  echo "Working over directory - ${DIR}"
+fi
+
+# Check unrar is available
+if ! type -P unrar >/dev/null; then
+  echo "Please install unrar or check your \$PATH"
+  exit 0
+fi
+
+# Check $1 exists and is a directory
+if [ -d "$DIR" ]; then
+  DIR="`pwd`"
+fi
+
+# Check if there is an "unrar" running already, if so, exit
+if ps -ef | grep -v grep | grep -v unrarall | grep unrar ; then
+  echo "unrar is allready running. Please only run this script once"
+  exit 0
+fi
+
+CURRENT_DIR=`pwd`
+
+#find all files 
+COUNT=0
+COMMAND="find "$DIR" -name *.rar"
+#modify IFS for new lines
+O=$IFS
+IFS=$(echo -en "\n\b")
+#echo $COMMAND
+#echo "find $DIR -name "*.rar""
+for file in `find "$DIR" -name *.rar`; do
+  let COUNT=COUNT+1
+  echo $file
+  # move to directory
+  filename=`basename "$file"`
+  dirname=`dirname "$file"`
+  extension="${filename##*.}"
+  sfilename="${filename%.*}"
+  cd "$dirname"
+  # unrar file with unrar e
+  unrar -y -o- e "$filename" >/dev/null
+  SUCCESS=$?
+  # if fail remove from count
+  if [ "$SUCCESS" -ne "0" ]; then
+    let COUNT=COUNT-1
+    echo "Extract of $file failed"
+  fi
+  # cleanup all .rar/.r[0-9][0-9]/
+  if $CLEAN ; then
+    if [ "$SUCCESS" -eq "0" ] || [ "$FORCE_CLEAN" -eq "1" ]; then
+      echo "Cleaning $file"
+      rm "${sfilename}".rar 2>/dev/null
+      rm "${sfilename}".r[0-9][0-9] 2>/dev/null
+    fi
+  fi
+  cd "$CURRENT_DIR"
+done
+IFS=$O
+
+#If success
+if [ "$COUNT" -ne "0" ]; then
+  EXIT_PHRASE="found and extracted"
+  if $CLEAN; then
+    EXIT_PHRASE="found, extracted and removed"
+  fi
+  echo "$COUNT rar files $EXIT_PHRASE"
+else
+  echo "no rar files extracted"
+fi

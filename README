@@ -1,0 +1,20 @@
+README - unrarall
+
+unrarall attemps to extract all rar files in a given directory and once successfully extracted remove all the rar files to cleanup. It is meant to be more error proof and quicker than cleaning by hand.
+
+INSTALL
+1. You just need to make sure you set execute permission on the script. This can be done using the following command:
+
+chmod u+x unrarall
+
+2. Place the script wherever you want it and rename it to whatever you want. I prefer unrarall.
+
+BUGS
+
+See TODO
+
+USAGE
+
+Run unrarall -h to get the help
+
+Enjoy.

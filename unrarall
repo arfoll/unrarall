@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 
 #unrarall
 # Copyright (C) 2011 Brendan Le Foll & Dan Liew
@@ -19,58 +19,97 @@
 
 # Set some defaults
 declare -x DIR="`pwd`"
-declare -x CLEAN=false
+declare -ix CLEAN=0
 declare -rx UNRARALL_VERSION="0.2"
+declare -ix FORCE_CLEAN=0
+declare -ix VERBOSE=0
+declare -x UNRAR_METHOD="e"
 
 function usage() 
 {
-  echo "Usage: unrarall -d <dir> [-c | --clean] [-f | --force] [-v | --version]
-               unrarall [-h | --help]
-
+  echo "Usage: unrarall [ --dir DIRECTORY ] [ --clean | --force ] [ --full-path ] [ --verbose ] 
+               unrarall --help
+	       unrarall --version
+	
+	Usage (short options):
+  	       unrarall [ -d DIRECTORY ] [ -c | -f ] [ -v ]
+	       unrarall -h
 DESCRIPTON
-unrarall is a utility to unrar and cleanup (delete) all files within a directory. Use --clean if you want to cleanup. Otherwise no cleaning is done. It can also be used to delete pre extracted .rar files with --force. Use with caution!
+unrarall is a utility to unrar and cleanup (delete) all rar files within a directory DIRECTORY. Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.
+
+Use --clean if you want to cleanup. Otherwise no cleaning is done. It can also be used to delete rar files that have already been used for extraction with --force. Use with caution!
 
 OPTIONS
 
--h, --help    Displays this help message and exits.
--c, --clean   Clean after unrar
--d, --dir     Specify directory. Otherwise 'pwd' is used
--f, --force   Force clean. Even if unrar fails, clean. Implies --clean
--v, --version Give version information version
+-c, --clean      Clean after unrar. If the extraction fails then the directory will NOT be cleaned. Use --force to override this.
+-d, --dir        Use directory DIRECTORY. If this argument is not supplied the current working directory is used.
+-f, --force      Force clean even if unrar fails. Implies --clean. Use this if you've already used unrarall on the directory before
+                 and now you want to remove the rar files. This should be pretty fast as unrar is set to not overwrite already extracted files.
+--full-path      Extract full path inside rar files instead of just extracting the files in the rar file which is the default behaviour.
+-h, --help       Displays this help message and exits.
+-v, --verbose    Show extraction progress as unrarall executes. This is not done by default
+--version        Give version information version.
 
 VERSION: $UNRARALL_VERSION
 
 "
 }
 
+#function to display pretty messages
+function message()
+{
+  #Assume $1 is message type & $2 is message
+  #See http://www.frexx.de/xterm-256-notes/ for information on xterm colour codes
+
+  case "$1" in
+    error)
+      #use escape sequence to show red text
+      echo -e "\033[31m${2}\033[0m" 1>&2
+    ;;
+    ok)
+      #use escape sequence to show green text
+      echo -e "\033[32m${2}\033[0m"
+    ;;
+    *)
+      echo "$2"
+  esac
+
+}
+
 # Parse command line arguments
 while [ -n "$1" ]; do
   case "$1" in
     -h | --help )  
-    	usage	
-        exit 0
-        ;;
-    -v | --version )  
-    	echo "$UNRARALL_VERSION"
-        exit 0
-        ;;
+      usage	
+      exit 0
+      ;;
+    --version )  
+      echo "$UNRARALL_VERSION"
+      exit 0
+      ;;
     -d | --dir )  
-    	shift
-	DIR="$1"
-        ;;
+      shift
+      DIR="$1"
+      ;;
     -c | --clean )  
-    	CLEAN=true
-        ;;
+      CLEAN=1
+      ;;
     -f | --force )  
-    	FORCE_CLEAN=1
-        CLEAN=true
-        ;;
-    *)	
-    	# user issued unrecognised option
-	echo -e "Unrecognised option: $1 \n"
-        usage
-        exit 1
-        ;;
+      FORCE_CLEAN=1
+      CLEAN=1
+      ;;
+    -v | --verbose )
+      VERBOSE=1
+      ;;
+    --full-path )
+      UNRAR_METHOD="x"
+      ;;
+    *)
+      # user issued unrecognised option
+      message error "Unrecognised option: $1" 
+      usage
+      exit 1
+      ;;
   esac
   shift
 done
@@ -78,27 +117,25 @@ done
 # Current Dir check
 if [ "${DIR}" == "." ]; then
   DIR="`pwd`"
-  echo "${DIR}"
 fi
 
 # Check unrar is available
 if ! type -P unrar >/dev/null; then
-  echo "Please install unrar or check your \$PATH" 2>&1
+  message error "Please install unrar or check your \$PATH"
   exit 1;
 fi
 
 # Check $DIR exists and is a directory
 if [ -d "$DIR" ]; then
-  DIR="`pwd`"
-  echo "Working over directory - ${DIR}"
+  echo "Working over directory \"${DIR}\""
 else
-  echo "Cannot find directory \"${DIR}\"" 2>&1
+  message error "Cannot find directory \"${DIR}\""
   exit 1;
 fi
 
 # Check if there is an "unrar" running already, if so, exit
 if ps -ef | grep -v grep | grep -v unrarall | grep unrar ; then
-  echo "unrar is allready running. Please only run this script once"
+  message error "unrar is allready running. Please only run this script once"
   exit 0
 fi
 
@@ -106,36 +143,54 @@ CURRENT_DIR=`pwd`
 
 #find all files 
 COUNT=0
-COMMAND="find "$DIR" -name *.rar"
 
 #modify IFS for new lines so filenames with spaces do not get split
 IFS_TEMP=$IFS
 IFS=$(echo -en "\n\b")
 
 #assuming only the .rar files are of interest
-for file in `find "$DIR" -name *.rar`; do
+for file in $(find "$DIR" -name '*.rar'); do
   let COUNT=COUNT+1
-  echo $file
-  # move to directory
+  echo -n "Extracting (${UNRAR_METHOD}) \"$file\"..."
   filename=`basename "$file"`
   dirname=`dirname "$file"`
-  extension="${filename##*.}"
-  sfilename="${filename%.*}"
+
+  #Strip .rar extension off filename
+  sfilename="${filename%.rar}"
+
+  # move to directory
   cd "$dirname"
+
   # unrar file with unrar e
-  unrar -y -o- e "$filename" >/dev/null
-  SUCCESS=$?
-  # if fail remove from count
-  if [ "$SUCCESS" -ne "0" ]; then
-    let COUNT=COUNT-1
-    echo "Extract of $file failed"
+  if [ "$VERBOSE" -eq 1 ]; then
+    unrar ${UNRAR_METHOD} -y -o-  "$filename"
+  else
+    unrar ${UNRAR_METHOD} -y -o- "$filename" >/dev/null
   fi
+  SUCCESS=$?
+
+  # if fail remove from count
+  if [ "$SUCCESS" -eq 0 ]; then
+    message ok "ok";
+  else
+    let COUNT=COUNT-1
+    message error "failed"
+  fi
+  
   # cleanup all .rar/.r[0-9][0-9]/
-  if $CLEAN ; then
-    if [ "$SUCCESS" -eq "0" ] || [ "$FORCE_CLEAN" -eq "1" ]; then
+  if [ "$CLEAN" -eq 1 ] ; then
+    if [ "$SUCCESS" -eq "0" ] || [ "$FORCE_CLEAN" -eq 1 ]; then
       echo "Cleaning $file"
-      rm "${sfilename}".rar 2>/dev/null
-      rm "${sfilename}".r[0-9][0-9] 2>/dev/null
+      if [ "$VERBOSE" -eq 1 ]; then
+        rm -v "${sfilename}".rar
+        rm -v "${sfilename}".r[0-9][0-9] 
+      else
+        rm "${sfilename}".rar 2>/dev/null
+        rm "${sfilename}".r[0-9][0-9] 2>/dev/null
+      fi
+
+    else
+      message error "Couldn't do requested clean because unrar extracted unsuccessfully. Use --force to override this behaviour"
     fi
   fi
   cd "$CURRENT_DIR"
@@ -143,12 +198,12 @@ done
 IFS=$IFS_TEMP
 
 #If success
-if [ "$COUNT" -ne "0" ]; then
+if [ "$COUNT" -ne 0 ]; then
   EXIT_PHRASE="found and extracted"
-  if $CLEAN; then
+  if [ "$CLEAN" -eq 1 ]; then
     EXIT_PHRASE="found, extracted and removed"
   fi
   echo "$COUNT rar files $EXIT_PHRASE"
 else
-  echo "no rar files extracted"
+  message error "no rar files extracted"
 fi

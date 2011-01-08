@@ -1,6 +1,6 @@
 README - unrarall
 
-unrarall attemps to extract all rar files in a given directory and once successfully extracted remove all the rar files to cleanup. It is meant to be more error proof and quicker than cleaning by hand.
+unrarall attemps to extract all rar files in a given directory (and its sub-directories) and once successfully extracted remove all the rar files to cleanup (you must pass --clean for this to happen). It is meant to be more error proof and quicker than cleaning by hand.
 
 INSTALL
 1. You just need to make sure you set execute permission on the script. This can be done using the following command:

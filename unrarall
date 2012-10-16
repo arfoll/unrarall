@@ -21,11 +21,12 @@
 # Set some defaults
 declare -x DIR="`pwd`"
 declare -ix CLEAN=0
-declare -rx UNRARALL_VERSION="0.2.1"
+declare -rx UNRARALL_VERSION="0.2.5"
 declare -ix FORCE_CLEAN=0
 declare -ix VERBOSE=0
 declare -ix QUIET=0
 declare -x UNRAR_METHOD="e"
+declare -x UNRAR_BIN="7z"
 
 function usage()
 {
@@ -131,10 +132,17 @@ if [ "${DIR}" == "." ]; then
   DIR="`pwd`"
 fi
 
-# Check unrar is available
-if ! type -P unrar >/dev/null; then
-  message error "Please install unrar or check your \$PATH"
-  exit 1;
+# Check unrar or 7z is available
+if ! type -P $UNRAR_BIN >/dev/null; then
+  # try fallback to unrar
+  if ! type -P unrar >/dev/null; then
+    message error "Please install 7z or unrar or check your \$PATH"
+    exit 1;
+  fi
+  UNRAR_BIN="unrar"
+  if [ "$VERBOSE" -eq 1 ]; then
+    message ok "Fell back to unrar, this is much slower. Consder installing 7z!"
+  fi
 fi
 
 # Check $DIR exists and is a directory
@@ -146,8 +154,8 @@ else
 fi
 
 # Check if there is an "unrar" running already, if so, exit
-if ps -ef | grep -v grep | grep -v unrarall | grep unrar ; then
-  message error "unrar is allready running. Please only run this script once"
+if ps -ef | grep -v grep | grep -v unrarall | grep ${UNRAR_BIN} ; then
+  message error "unrarall or ${UNRAR_BIN} is allready running. Please only run this script once"
   exit 0
 fi
 
@@ -175,9 +183,9 @@ for file in $(find "$DIR" -name '*.rar'); do
 
   # unrar file with unrar e
   if [ "$VERBOSE" -eq 1 ]; then
-    unrar ${UNRAR_METHOD} -y -o-  "$filename"
+    ${UNRAR_BIN} ${UNRAR_METHOD} -y "$filename"
   else
-    unrar ${UNRAR_METHOD} -y -o- "$filename" >/dev/null
+    ${UNRAR_BIN} ${UNRAR_METHOD} -y "$filename" >/dev/null
   fi
   SUCCESS=$?
 
@@ -202,7 +210,7 @@ for file in $(find "$DIR" -name '*.rar'); do
       fi
 
     else
-      message error "Couldn't do requested clean because unrar extracted unsuccessfully. Use --force to override this behaviour"
+      message error "Couldn't do requested clean because ${UNRAR_BIN} extracted unsuccessfully. Use --force to override this behaviour"
     fi
   fi
   cd "$CURRENT_DIR"

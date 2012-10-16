@@ -1,7 +1,5 @@
 TODO list for unrarall
 == For 0.3 ==
 
-Capable of using unrar or rar if unrar is not available on the system
-
 Implement as hook to iscp
 

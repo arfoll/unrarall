@@ -45,6 +45,7 @@ Use --clean if you want to cleanup. Otherwise no cleaning is done. It can also b
 
 OPTIONS
 
+-7, --7zip       Force using 7zip instead of trying to automatically find a program to extract the rar files.
 -c, --clean      Clean after unrar. If the extraction fails then the directory will NOT be cleaned. Use --force to override this.
 -d, --dir        Use directory DIRECTORY. If this argument is not supplied the current working directory is used.
 -f, --force      Force clean even if unrar fails. Implies --clean. Use this if you've already used unrarall on the directory before
@@ -128,6 +129,9 @@ while [ -n "$1" ]; do
       ;;
     --full-path )
       UNRAR_METHOD="x"
+      ;;
+    -7 | --7zip)
+      UNRARALL_BIN=7z
       ;;
     *)
       # user issued unrecognised option

@@ -28,6 +28,10 @@ declare -ix QUIET=0
 declare -x UNRAR_METHOD="e"
 declare -x UNRARALL_BIN="" #Leave empty to let unrarall to loop through UNRAR_BINARIES, setting this will disable searching through UNRAR_BINARIES
 declare -x UNRAR_BINARIES=(unrar 7z) #Array of binaries to try and use, the order here is the order of precedence
+declare -Ax UNRAR_BINARY_FLAGS=( \
+    [unrar]='-o+ -y' \
+    [7z]='-y' \
+    ) #Flags for different binaries
 
 function usage()
 {
@@ -221,9 +225,9 @@ for file in $(find "$DIR" -name '*.rar'); do
 
   # unrar file with unrar e
   if [ "$VERBOSE" -eq 1 ]; then
-    ${UNRARALL_BIN} ${UNRAR_METHOD} -y "$filename"
+    ${UNRARALL_BIN} ${UNRAR_METHOD} ${UNRAR_BINARY_FLAGS[${UNRARALL_BIN}]} "$filename"
   else
-    ${UNRARALL_BIN} ${UNRAR_METHOD} -y "$filename" >/dev/null
+    ${UNRARALL_BIN} ${UNRAR_METHOD} ${UNRAR_BINARY_FLAGS[${UNRARALL_BIN}]} "$filename" >/dev/null
   fi
   SUCCESS=$?
 

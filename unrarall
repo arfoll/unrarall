@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 
 #unrarall
 # Copyright (C) 2011, 2012 Brendan Le Foll <brendan@fridu.net>
@@ -21,12 +21,13 @@
 # Set some defaults
 declare -x DIR="`pwd`"
 declare -ix CLEAN=0
-declare -rx UNRARALL_VERSION="0.2.5"
+declare -rx UNRARALL_VERSION="0.2.6"
 declare -ix FORCE_CLEAN=0
 declare -ix VERBOSE=0
 declare -ix QUIET=0
 declare -x UNRAR_METHOD="e"
-declare -x UNRAR_BIN="7z"
+declare -x UNRARALL_BIN="" #Leave empty to let unrarall to loop through UNRAR_BINARIES, setting this will disable searching through UNRAR_BINARIES
+declare -x UNRAR_BINARIES=(unrar 7z) #Array of binaries to try and use, the order here is the order of precedence
 
 function usage()
 {
@@ -132,18 +133,37 @@ if [ "${DIR}" == "." ]; then
   DIR="`pwd`"
 fi
 
-# Check unrar or 7z is available
-if ! type -P $UNRAR_BIN >/dev/null; then
-  # try fallback to unrar
-  if ! type -P unrar >/dev/null; then
-    message error "Please install 7z or unrar or check your \$PATH"
-    exit 1;
-  fi
-  UNRAR_BIN="unrar"
-  if [ "$VERBOSE" -eq 1 ]; then
-    message ok "Fell back to unrar, this is much slower. Consder installing 7z!"
+
+#If No user specified binary, cycle through array and try and find a binary that can be used
+if [ -z "${UNRARALL_BIN}" ]; then
+  for (( index=0; index < ${#UNRAR_BINARIES[@]}; index++)); do
+    #Check for binary
+    [ $VERBOSE -eq 1 ] && message nnl "Looking for ${UNRAR_BINARIES[$index]}..."
+    if type -P ${UNRAR_BINARIES[$index]} 2>&1 > /dev/null ; then
+      #Binary found
+      UNRARALL_BIN="${UNRAR_BINARIES[$index]}"
+      [ $VERBOSE -eq 1 ] && message ok "found"
+      break;
+    else
+    	[ $VERBOSE -eq 1 ] && message error "not found"
+    fi
+
+    #check if end of list
+    if [ $index -eq $(( ${#UNRAR_BINARIES[@]} -1)) ]; then
+	message error "Failed to find binary to perform rar extraction. The following binaries were looked for ${UNRAR_BINARIES[*]}"
+	exit 1;
+    fi
+  done
+else
+  #check the manually specified binary exists
+  if ! type -P ${UNRARALL_BIN} ; then
+  	message error "The manually specified binary ${UNRARALL_BIN} cannot be found"
+	exit 1;
   fi
 fi
+
+#Inform the user about the binary chosen
+[ $VERBOSE -eq 1 ] && echo "Using \"${UNRARALL_BIN}\" to extract rar files" ;
 
 # Check $DIR exists and is a directory
 if [ -d "$DIR" ]; then
@@ -154,8 +174,8 @@ else
 fi
 
 # Check if there is an "unrar" running already, if so, exit
-if ps -ef | grep -v grep | grep -v unrarall | grep ${UNRAR_BIN} ; then
-  message error "unrarall or ${UNRAR_BIN} is allready running. Please only run this script once"
+if ps -ef | grep -v grep | grep -v unrarall | grep ${UNRARALL_BIN} ; then
+  message error "unrarall or ${UNRARALL_BIN} is allready running. Please only run this script once"
   exit 0
 fi
 
@@ -183,9 +203,9 @@ for file in $(find "$DIR" -name '*.rar'); do
 
   # unrar file with unrar e
   if [ "$VERBOSE" -eq 1 ]; then
-    ${UNRAR_BIN} ${UNRAR_METHOD} -y "$filename"
+    ${UNRARALL_BIN} ${UNRAR_METHOD} -y "$filename"
   else
-    ${UNRAR_BIN} ${UNRAR_METHOD} -y "$filename" >/dev/null
+    ${UNRARALL_BIN} ${UNRAR_METHOD} -y "$filename" >/dev/null
   fi
   SUCCESS=$?
 
@@ -210,7 +230,7 @@ for file in $(find "$DIR" -name '*.rar'); do
       fi
 
     else
-      message error "Couldn't do requested clean because ${UNRAR_BIN} extracted unsuccessfully. Use --force to override this behaviour"
+      message error "Couldn't do requested clean because ${UNRARALL_BIN} extracted unsuccessfully. Use --force to override this behaviour"
     fi
   fi
   cd "$CURRENT_DIR"

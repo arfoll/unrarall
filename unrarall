@@ -171,7 +171,7 @@ if [ -z "${UNRARALL_BIN}" ]; then
   done
 else
   #check the manually specified binary exists
-  if ! type -P ${UNRARALL_BIN} ; then
+  if ! type -P ${UNRARALL_BIN} 2>&1 > /dev/null ; then
   	message error "The manually specified binary ${UNRARALL_BIN} cannot be found"
 	exit 1;
   fi

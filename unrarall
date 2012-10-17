@@ -90,8 +90,11 @@ function message()
       ;;
       nnl)
         #use echo -n to avoid new line
-  echo -n "$2"
-  ;;
+        echo -n "$2"
+        ;;
+      info)
+        echo "$2"
+        ;;
       *)
         echo "$2"
     esac
@@ -178,7 +181,7 @@ else
 fi
 
 #Inform the user about the binary chosen
-[ $VERBOSE -eq 1 ] && echo "Using \"${UNRARALL_BIN}\" to extract rar files" ;
+[ $VERBOSE -eq 1 ] && message info "Using \"${UNRARALL_BIN}\" to extract rar files" ;
 
 # Check $DIR exists and is a directory
 if [ -d "$DIR" ]; then
@@ -235,7 +238,7 @@ for file in $(find "$DIR" -name '*.rar'); do
   # cleanup all rar files in the current directory
   if [ "$CLEAN" -eq 1 ] ; then
     if [ "$SUCCESS" -eq "0" ] || [ "$FORCE_CLEAN" -eq 1 ]; then
-      echo "Cleaning $file"
+      message info "Cleaning $file"
       #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
       find . -maxdepth 1 -type f -iregex '\./'"$sfilename"'.r\([0-9]+\|ar\)$' -exec rm $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
 
@@ -253,7 +256,7 @@ if [ "$QUIET" -ne 1 ]; then
     if [ "$CLEAN" -eq 1 ]; then
       EXIT_PHRASE="found, extracted and removed"
     fi
-    echo "$COUNT rar files $EXIT_PHRASE"
+    message info "$COUNT rar files $EXIT_PHRASE"
   else
     message error "no rar files extracted"
   fi

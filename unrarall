@@ -21,7 +21,7 @@
 # Set some defaults
 declare -x DIR="`pwd`"
 declare -ix CLEAN=0
-declare -rx UNRARALL_VERSION="0.2.6"
+declare -rx UNRARALL_VERSION="0.2.7"
 declare -ix FORCE_CLEAN=0
 declare -ix VERBOSE=0
 declare -ix QUIET=0
@@ -59,6 +59,17 @@ VERSION: $UNRARALL_VERSION
 
 "
 }
+
+function clean-up
+{
+	#perform any necessary clean up
+
+	message error "unrarall is exiting"
+	exit 1;
+}
+
+#Catch exit signals
+trap clean-up SIGQUIT SIGINT SIGTERM
 
 #function to display pretty messages
 function message()

@@ -65,7 +65,6 @@ VERSION: $UNRARALL_VERSION
 function clean-up
 {
 	#perform any necessary clean up
-
 	message error "unrarall is exiting"
 	exit 1;
 }

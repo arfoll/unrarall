@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 
 #unrarall
 # Copyright (C) 2011, 2012 Brendan Le Foll <brendan@fridu.net>
@@ -28,10 +28,7 @@ declare -ix QUIET=0
 declare -x UNRAR_METHOD="e"
 declare -x UNRARALL_BIN="" #Leave empty to let unrarall to loop through UNRAR_BINARIES, setting this will disable searching through UNRAR_BINARIES
 declare -x UNRAR_BINARIES=(unrar 7z) #Array of binaries to try and use, the order here is the order of precedence
-declare -Ax UNRAR_BINARY_FLAGS=( \
-    [unrar]='-o+ -y' \
-    [7z]='-y' \
-    ) #Flags for different binaries
+declare -x UNRARALL_PID="$$"
 
 function usage()
 {
@@ -103,6 +100,27 @@ function message()
         echo "$2"
     esac
   fi
+}
+
+#function to get flags for unrar binary
+function getUnrarFlags()
+{
+  #$1 is assumed to be unrar binary name
+  case "$1" in
+    unrar)
+      echo -o+ -y
+    ;;
+    7z)
+      echo -y
+    ;;
+    *)
+      #This code should only be reached if the programmer has made an error
+      message error "Failed to determine flags for unsupported program \"$1\""
+      #We will probably be called in a sub shell but we need to kill the parent shell
+      kill -9 ${UNRARALL_PID}
+      exit 1;
+    ;;
+  esac
 }
 
 # Parse command line arguments
@@ -225,9 +243,9 @@ for file in $(find "$DIR" -name '*.rar'); do
 
   # unrar file with unrar e
   if [ "$VERBOSE" -eq 1 ]; then
-    ${UNRARALL_BIN} ${UNRAR_METHOD} ${UNRAR_BINARY_FLAGS[${UNRARALL_BIN}]} "$filename"
+    ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) "$filename"
   else
-    ${UNRARALL_BIN} ${UNRAR_METHOD} ${UNRAR_BINARY_FLAGS[${UNRARALL_BIN}]} "$filename" >/dev/null
+    ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) "$filename" >/dev/null
   fi
   SUCCESS=$?
 

@@ -21,7 +21,7 @@
 # Set some defaults
 declare -x DIR="`pwd`"
 declare -ix CLEAN=0
-declare -rx UNRARALL_VERSION="0.2.9"
+declare -rx UNRARALL_VERSION="0.3"
 declare -ix FORCE_CLEAN=0
 declare -ix VERBOSE=0
 declare -ix QUIET=0

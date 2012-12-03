@@ -212,12 +212,6 @@ else
   exit 1;
 fi
 
-# Check if there is an "unrar" running already, if so, exit
-if ps -ef | grep -v grep | grep -v unrarall | grep ${UNRARALL_BIN} ; then
-  message error "unrarall or ${UNRARALL_BIN} is allready running. Please only run this script once"
-  exit 0
-fi
-
 CURRENT_DIR=`pwd`
 
 #find all files

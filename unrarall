@@ -33,12 +33,12 @@ declare -x UNRARALL_PID="$$"
 
 function usage()
 {
-  echo "Usage: unrarall [ --dir DIRECTORY ] [ --clean | --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip]
-               unrarall --help
+  echo "Usage: unrarall [ --dir DIRECTORY ] [ --clean | --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry]
+         unrarall --help
          unrarall --version
 
   Usage (short options):
-           unrarall [ -d DIRECTORY ] [ -c | -f ] [ -v | -q ] [-7]
+         unrarall [ -d DIRECTORY ] [ -c | -f ] [ -v | -q ] [-7] [-e]
          unrarall -h
 DESCRIPTON
 unrarall is a utility to unrar and cleanup (delete) all rar files within a directory DIRECTORY. Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.

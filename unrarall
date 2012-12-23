@@ -23,22 +23,24 @@ declare -x DIR="`pwd`"
 declare -x RM="rm"
 declare -ix CLEAN=0
 declare -rx UNRARALL_VERSION="0.3.1"
-declare -ix FORCE_CLEAN=0
+declare -ix FORCE=0
 declare -ix VERBOSE=0
 declare -ix QUIET=0
+declare -ix CKSFV=1
 declare -x UNRAR_METHOD="e"
+declare -x CKSFV_FLAGS="-q -g"
 declare -x UNRARALL_BIN="" #Leave empty to let unrarall to loop through UNRAR_BINARIES, setting this will disable searching through UNRAR_BINARIES
 declare -x UNRAR_BINARIES=(unrar 7z) #Array of binaries to try and use, the order here is the order of precedence
 declare -x UNRARALL_PID="$$"
 
 function usage()
 {
-  echo "Usage: unrarall [ --dir DIRECTORY ] [ --clean | --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry]
+  echo "Usage: unrarall [ --dir DIRECTORY ] [ --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv]
          unrarall --help
          unrarall --version
 
   Usage (short options):
-         unrarall [ -d DIRECTORY ] [ -c | -f ] [ -v | -q ] [-7] [-e]
+         unrarall [ -d DIRECTORY ] [ -c | -f ] [ -v | -q ] [-7] [-e] [-s]
          unrarall -h
 DESCRIPTON
 unrarall is a utility to unrar and cleanup (delete) all rar files within a directory DIRECTORY. Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.
@@ -49,10 +51,10 @@ OPTIONS
 
 -7, --7zip       Force using 7zip instead of trying to automatically find a program to extract the rar files.
 -e, --dry        Dry run of unrar and cleaning. No action will actually be performed.
+-s, --disable-cksfv      Use cksfv (if present) to check the CRC of the downloaded files (if present) before extracting
 -c, --clean      Clean after unrar. If the extraction fails then the directory will NOT be cleaned. Use --force to override this.
 -d, --dir        Use directory DIRECTORY. If this argument is not supplied the current working directory is used.
--f, --force      Force clean even if unrar fails. Implies --clean. Use this if you've already used unrarall on the directory before
-                 and now you want to remove the rar files. This should be pretty fast as unrar is set to not overwrite already extracted files.
+-f, --force      Force unrar even if sfv check failed and if --clean will clean even if unrar fails.
 --full-path      Extract full path inside rar files instead of just extracting the files in the rar file which is the default behaviour.
 -h, --help       Displays this help message and exits.
 -v, --verbose    Show extraction progress as unrarall executes. This is not done by default
@@ -146,15 +148,18 @@ while [ -n "$1" ]; do
       UNRARALL_BIN=echo
       RM="echo"
       ;;
+    -s | --disable-cksfv )
+      CKSFV=0
+    ;;
     -c | --clean )
       CLEAN=1
       ;;
     -f | --force )
-      FORCE_CLEAN=1
-      CLEAN=1
+      FORCE=1
       ;;
     -v | --verbose )
       VERBOSE=1
+      CKSFV_FLAGS="-g"
       ;;
     -q | --quiet )
       VERBOSE=0
@@ -255,13 +260,27 @@ for file in $(find "$DIR" -name '*.rar'); do
   # move to directory
   cd "$dirname"
 
-  # unrar file with unrar e
-  if [ "$VERBOSE" -eq 1 ]; then
-    ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) "$filename"
-  else
-    ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) "$filename" >/dev/null
+  SUCCESS=0
+  if [ "$CKSFV" -eq 1 ]; then
+    if type -P cksfv 2>&1 > /dev/null ; then
+      eval cksfv ${CKSFV_FLAGS} "${sfilename}.sfv"
+      # CKSFV will print error message even with -q on error
+      SUCCESS=$?
+    else
+      message info "Install cksfv in order to get CRC checked before using unrar"
+      SUCCESS=0
+    fi
   fi
-  SUCCESS=$?
+
+  # unrar file if SFV checked out or --force was given
+  if [ "$SUCCESS" -eq 0 ] || [ "$FORCE" -eq 1 ]; then
+    if [ "$VERBOSE" -eq 1 ]; then
+      ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) "$filename"
+    else
+      ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) "$filename" >/dev/null
+    fi
+    SUCCESS=$?
+  fi
 
   # if fail remove from count
   if [ "$SUCCESS" -eq 0 ]; then
@@ -273,7 +292,7 @@ for file in $(find "$DIR" -name '*.rar'); do
 
   # cleanup all rar files in the current directory
   if [ "$CLEAN" -eq 1 ] ; then
-    if [ "$SUCCESS" -eq "0" ] || [ "$FORCE_CLEAN" -eq 1 ]; then
+    if [ "$SUCCESS" -eq "0" ] || [ "$FORCE" -eq 1 ]; then
       message info "Cleaning $file using $sfilename"
       #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
       find . -maxdepth 1 -type f -iregex '\./'"$sfilename"'.\([r-z][0-9]+\|rar\|part[0-9]+.rar\)$' -exec ${RM} $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;

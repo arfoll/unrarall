@@ -262,13 +262,16 @@ for file in $(find "$DIR" -name '*.rar'); do
 
   SUCCESS=0
   if [ "$CKSFV" -eq 1 ]; then
-    if type -P cksfv 2>&1 > /dev/null ; then
-      eval cksfv ${CKSFV_FLAGS} "${sfilename}.sfv"
-      # CKSFV will print error message even with -q on error
-      SUCCESS=$?
-    else
-      message info "Install cksfv in order to get CRC checked before using unrar"
-      SUCCESS=0
+    # check an sfv file is present
+    if [ -e "${sfilename}.sfv" ]; then
+      if type -P cksfv 2>&1 > /dev/null ; then
+        eval cksfv ${CKSFV_FLAGS} "${sfilename}.sfv"
+        # CKSFV will print error message even with -q on error
+        SUCCESS=$?
+      else
+        message info "Install cksfv in order to get CRC checked before using unrar"
+        SUCCESS=0
+      fi
     fi
   fi
 

@@ -2,7 +2,7 @@
 
 #unrarall
 # Copyright (C) 2011, 2012 Brendan Le Foll <brendan@fridu.net>
-# Copyright (C) 2011, 2012  Dan Liew <dan@su-root.co.uk>
+# Copyright (C) 2011, 2012 Dan Liew <dan@su-root.co.uk>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -20,8 +20,9 @@
 
 # Set some defaults
 declare -x DIR="`pwd`"
+declare -x RM="rm"
 declare -ix CLEAN=0
-declare -rx UNRARALL_VERSION="0.3"
+declare -rx UNRARALL_VERSION="0.3.1"
 declare -ix FORCE_CLEAN=0
 declare -ix VERBOSE=0
 declare -ix QUIET=0
@@ -47,6 +48,7 @@ Use --clean if you want to cleanup. Otherwise no cleaning is done. It can also b
 OPTIONS
 
 -7, --7zip       Force using 7zip instead of trying to automatically find a program to extract the rar files.
+-e, --dry        Dry run of unrar and cleaning. No action will actually be performed.
 -c, --clean      Clean after unrar. If the extraction fails then the directory will NOT be cleaned. Use --force to override this.
 -d, --dir        Use directory DIRECTORY. If this argument is not supplied the current working directory is used.
 -f, --force      Force clean even if unrar fails. Implies --clean. Use this if you've already used unrarall on the directory before
@@ -112,6 +114,9 @@ function getUnrarFlags()
     7z)
       echo -y
     ;;
+    echo)
+      echo
+    ;;
     *)
       #This code should only be reached if the programmer has made an error
       message error "Failed to determine flags for unsupported program \"$1\""
@@ -137,6 +142,10 @@ while [ -n "$1" ]; do
       shift
       DIR="$1"
       ;;
+    -e | --dry )
+      UNRARALL_BIN=echo
+      RM="echo"
+      ;;
     -c | --clean )
       CLEAN=1
       ;;
@@ -155,7 +164,10 @@ while [ -n "$1" ]; do
       UNRAR_METHOD="x"
       ;;
     -7 | --7zip)
-      UNRARALL_BIN=7z
+      # to ensure that if --dry and then --7zip are used then we still do a dry run
+      if [ "$UNRARALL_BIN" != 'echo' ]; then
+        UNRARALL_BIN=7z
+      fi
       ;;
     *)
       # user issued unrecognised option
@@ -221,15 +233,24 @@ COUNT=0
 IFS_TEMP=$IFS
 IFS=$(echo -en "\n\b")
 
-#assuming only the .rar files are of interest
+# assuming only the .rar files are of interest
 for file in $(find "$DIR" -name '*.rar'); do
+  filename=`basename "$file"`
+  # Strip .rar extension off filename
+  sfilename="${filename%.rar}"
+
+  # if rar is of style partxx.rar then only extract $filename.part01.rar
+  if [[ "$file" =~ .part[0-9]+.rar$ ]]; then
+    if [[ "$file" =~ .part0*1.rar$ ]]; then
+      sfilename=`echo "$sfilename" | sed 's/.part[0-9]*$//'`
+      message info "Using rar 3.x split archive format"
+    else
+      continue
+    fi
+  fi
   let COUNT=COUNT+1
   message nnl "Extracting (${UNRAR_METHOD}) \"$file\"..."
-  filename=`basename "$file"`
   dirname=`dirname "$file"`
-
-  #Strip .rar extension off filename
-  sfilename="${filename%.rar}"
 
   # move to directory
   cd "$dirname"
@@ -253,10 +274,9 @@ for file in $(find "$DIR" -name '*.rar'); do
   # cleanup all rar files in the current directory
   if [ "$CLEAN" -eq 1 ] ; then
     if [ "$SUCCESS" -eq "0" ] || [ "$FORCE_CLEAN" -eq 1 ]; then
-      message info "Cleaning $file"
+      message info "Cleaning $file using $sfilename"
       #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
-      find . -maxdepth 1 -type f -iregex '\./'"$sfilename"'.r\([0-9]+\|ar\)$' -exec rm $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
-
+      find . -maxdepth 1 -type f -iregex '\./'"$sfilename"'.\([r-z][0-9]+\|rar\|part[0-9]+.rar\)$' -exec ${RM} $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     else
       message error "Couldn't do requested clean because ${UNRARALL_BIN} extracted unsuccessfully. Use --force to override this behaviour"
     fi

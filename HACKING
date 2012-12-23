@@ -1,0 +1,14 @@
+UNRARALL - hacking document
+
+== RAR format ==
+
+This document describes the RAR file fomart as understood by unrarall. We only worry about RAR 2.x and newer.
+
+RAR archives are specified by the 'Rar!' signature (since 1.5) as can be seen by running "head -1 file.rar | cut -c 1-4". Unrarall does not yet check for valid rar archives but could do in the near future.
+
+RAR archives before 3.x used the naming format .[r-z][0-9][0-9]. This was probably done for DOS, however RAR 3.x moved to using the more sensible part[0-9][0-9][0-9].rar format. It is unclear wether 3 digits is the maximum or wether it really is part[0-9]+.rar. For the sake of unrarall we assume the latter.
+
+== Compatibility ==
+
+This is a bash script and so is fairly unix friendly, however all testing by developers is done on Bash4+. We do however try and maintain Bash3+ compatibility mostly for OS X users who do not want to change their shell.
+

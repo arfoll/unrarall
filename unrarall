@@ -22,6 +22,7 @@
 declare -x DIR="`pwd`"
 declare -x RM="rm"
 declare -ix CLEAN=0
+declare -ix CLEAN_NFO=0
 declare -rx UNRARALL_VERSION="0.3.1"
 declare -ix FORCE=0
 declare -ix VERBOSE=0
@@ -35,12 +36,12 @@ declare -x UNRARALL_PID="$$"
 
 function usage()
 {
-  echo "Usage: unrarall [ --dir DIRECTORY ] [ --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv]
+  echo "Usage: unrarall [ --dir DIRECTORY ] [ --clean | --clean-nfo ] [ --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv]
          unrarall --help
          unrarall --version
 
   Usage (short options):
-         unrarall [ -d DIRECTORY ] [ -c | -f ] [ -v | -q ] [-7] [-e] [-s]
+         unrarall [ -d DIRECTORY ] [ -c | -cn ] [-f] [ -v | -q ] [-7] [-e] [-s]
          unrarall -h
 DESCRIPTON
 unrarall is a utility to unrar and cleanup (delete) all rar files within a directory DIRECTORY. Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.
@@ -52,7 +53,8 @@ OPTIONS
 -7, --7zip       Force using 7zip instead of trying to automatically find a program to extract the rar files.
 -e, --dry        Dry run of unrar and cleaning. No action will actually be performed.
 -s, --disable-cksfv      Use cksfv (if present) to check the CRC of the downloaded files (if present) before extracting
--c, --clean      Clean after unrar. If the extraction fails then the directory will NOT be cleaned. Use --force to override this.
+-c, --clean      Clean after unrar, this means all rar files but also any sfv file. If the extraction fails then the directory will NOT be cleaned. Use --force to override this.
+-cn, --clean-nfo Clean nfo files, implies --clean.
 -d, --dir        Use directory DIRECTORY. If this argument is not supplied the current working directory is used.
 -f, --force      Force unrar even if sfv check failed and if --clean will clean even if unrar fails.
 --full-path      Extract full path inside rar files instead of just extracting the files in the rar file which is the default behaviour.
@@ -150,9 +152,13 @@ while [ -n "$1" ]; do
       ;;
     -s | --disable-cksfv )
       CKSFV=0
-    ;;
+      ;;
     -c | --clean )
       CLEAN=1
+      ;;
+    -cn | --clean-nfo )
+      CLEAN=1
+      CLEAN_NFO=1
       ;;
     -f | --force )
       FORCE=1
@@ -298,7 +304,10 @@ for file in $(find "$DIR" -name '*.rar'); do
     if [ "$SUCCESS" -eq "0" ] || [ "$FORCE" -eq 1 ]; then
       message info "Cleaning $file using $sfilename"
       #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
-      find . -maxdepth 1 -type f -iregex '\./'"$sfilename"'.\([r-z][0-9]+\|rar\|part[0-9]+.rar\)$' -exec ${RM} $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find . -maxdepth 1 -type f -iregex '\./'"$sfilename"'.\(sfv\|[r-z][0-9]+\|rar\|part[0-9]+.rar\)$' -exec ${RM} $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      if [ "$CLEAN_NFO" -eq 1 ]; then
+        rm -f ${sfilename}.nfo
+      fi
     else
       message error "Couldn't do requested clean because ${UNRARALL_BIN} extracted unsuccessfully. Use --force to override this behaviour"
     fi

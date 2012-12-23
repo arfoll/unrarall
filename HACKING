@@ -12,3 +12,7 @@ RAR archives before 3.x used the naming format .[r-z][0-9][0-9]. This was probab
 
 This is a bash script and so is fairly unix friendly, however all testing by developers is done on Bash4+. We do however try and maintain Bash3+ compatibility mostly for OS X users who do not want to change their shell.
 
+== More ==
+
+A reverse engineered specification of the rar format is available here:
+http://kthoom.googlecode.com/hg/docs/unrar.html

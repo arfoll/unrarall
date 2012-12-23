@@ -1,5 +1,6 @@
 TODO list for unrarall
-== For 0.3 ==
 
 Implement as hook to iscp
+Check .sfv file if present
+Remove NFO files
 

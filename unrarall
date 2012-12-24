@@ -33,18 +33,19 @@ declare -x CKSFV_FLAGS="-q -g"
 declare -x UNRARALL_BIN="" #Leave empty to let unrarall to loop through UNRAR_BINARIES, setting this will disable searching through UNRAR_BINARIES
 declare -x UNRAR_BINARIES=(unrar 7z) #Array of binaries to try and use, the order here is the order of precedence
 declare -x UNRARALL_PID="$$"
+declare -x UNRARALL_EXECUTABLE_NAME=$(basename $0;)
 
 function usage()
 {
-  echo "Usage: unrarall [ --dir DIRECTORY ] [ --clean | --clean-nfo ] [ --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv]
-         unrarall --help
-         unrarall --version
+  echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --dir DIRECTORY ] [ --clean | --clean-nfo ] [ --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv]
+         ${UNRARALL_EXECUTABLE_NAME} --help
+         ${UNRARALL_EXECUTABLE_NAME} --version
 
   Usage (short options):
-         unrarall [ -d DIRECTORY ] [ -c | -cn ] [-f] [ -v | -q ] [-7] [-e] [-s]
-         unrarall -h
+         ${UNRARALL_EXECUTABLE_NAME} [ -d DIRECTORY ] [ -c | -cn ] [-f] [ -v | -q ] [-7] [-e] [-s]
+         ${UNRARALL_EXECUTABLE_NAME} -h
 DESCRIPTON
-unrarall is a utility to unrar and cleanup (delete) all rar files within a directory DIRECTORY. Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.
+${UNRARALL_EXECUTABLE_NAME} is a utility to unrar and cleanup (delete) all rar files within a directory DIRECTORY. Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.
 
 Use --clean if you want to cleanup. Otherwise no cleaning is done. It can also be used to delete rar files that have already been used for extraction with --force. Use with caution!
 
@@ -59,7 +60,7 @@ OPTIONS
 -f, --force      Force unrar even if sfv check failed and if --clean will clean even if unrar fails.
 --full-path      Extract full path inside rar files instead of just extracting the files in the rar file which is the default behaviour.
 -h, --help       Displays this help message and exits.
--v, --verbose    Show extraction progress as unrarall executes. This is not done by default
+-v, --verbose    Show extraction progress as ${UNRARALL_EXECUTABLE_NAME} executes. This is not done by default
 -q, --quiet      Be completely quiet. No output will be written to the screen
 --version        Give version information version.
 
@@ -71,7 +72,7 @@ VERSION: $UNRARALL_VERSION
 function clean-up
 {
 	#perform any necessary clean up
-	message error "unrarall is exiting"
+	message error "${UNRARALL_EXECUTABLE_NAME} is exiting"
 	exit 1;
 }
 

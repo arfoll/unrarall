@@ -19,7 +19,7 @@
 ##########################################################################
 
 # Set some defaults
-declare -x DIR="`pwd`"
+declare -x DIR=""
 declare -x RM="rm"
 declare -ix CLEAN=0
 declare -ix CLEAN_NFO=0
@@ -37,15 +37,15 @@ declare -x UNRARALL_EXECUTABLE_NAME=$(basename $0;)
 
 function usage()
 {
-  echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --dir DIRECTORY ] [ --clean | --clean-nfo ] [ --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv]
+  echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean | --clean-nfo ] [ --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv] <DIRECTORY>
          ${UNRARALL_EXECUTABLE_NAME} --help
          ${UNRARALL_EXECUTABLE_NAME} --version
 
   Usage (short options):
-         ${UNRARALL_EXECUTABLE_NAME} [ -d DIRECTORY ] [ -c | -cn ] [-f] [ -v | -q ] [-7] [-e] [-s]
+         ${UNRARALL_EXECUTABLE_NAME}  [ -c | -cn ] [-f] [ -v | -q ] [-7] [-e] [-s]
          ${UNRARALL_EXECUTABLE_NAME} -h
 DESCRIPTON
-${UNRARALL_EXECUTABLE_NAME} is a utility to unrar and cleanup (delete) all rar files within a directory DIRECTORY. Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.
+${UNRARALL_EXECUTABLE_NAME} is a utility to unrar and cleanup (delete) all rar files within a directory <DIRECTORY>. Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.
 
 Use --clean if you want to cleanup. Otherwise no cleaning is done. It can also be used to delete rar files that have already been used for extraction with --force. Use with caution!
 
@@ -133,62 +133,70 @@ function getUnrarFlags()
 }
 
 # Parse command line arguments
+if [ "$#" -lt 1 ]; then
+  message error "Insufficient number of arguments. See ${UNRARALL_EXECUTABLE_NAME} --help"
+  exit 1;
+fi
+
 while [ -n "$1" ]; do
-  case "$1" in
-    -h | --help )
-      usage
-      exit 0
-      ;;
-    --version )
-      echo "$UNRARALL_VERSION"
-      exit 0
-      ;;
-    -d | --dir )
-      shift
-      DIR="$1"
-      ;;
-    -e | --dry )
-      UNRARALL_BIN=echo
-      RM="echo"
-      ;;
-    -s | --disable-cksfv )
-      CKSFV=0
-      ;;
-    -c | --clean )
-      CLEAN=1
-      ;;
-    -cn | --clean-nfo )
-      CLEAN=1
-      CLEAN_NFO=1
-      ;;
-    -f | --force )
-      FORCE=1
-      ;;
-    -v | --verbose )
-      VERBOSE=1
-      CKSFV_FLAGS="-g"
-      ;;
-    -q | --quiet )
-      VERBOSE=0
-      QUIET=1
-      ;;
-    --full-path )
-      UNRAR_METHOD="x"
-      ;;
-    -7 | --7zip)
-      # to ensure that if --dry and then --7zip are used then we still do a dry run
-      if [ "$UNRARALL_BIN" != 'echo' ]; then
-        UNRARALL_BIN=7z
-      fi
-      ;;
-    *)
-      # user issued unrecognised option
-      message error "Unrecognised option: $1"
-      usage
-      exit 1
-      ;;
-  esac
-  shift
+  if [ $# -gt 1 ] || [ $( echo "$1" | grep -Ec '^(-h|--help|--version)$' ) -eq 1 ] ; then
+    #Handle optional arguments
+    case "$1" in
+      -h | --help )
+        usage
+        exit 0
+        ;;
+      --version )
+        echo "$UNRARALL_VERSION"
+        exit 0
+        ;;
+      -e | --dry )
+        UNRARALL_BIN=echo
+        RM="echo"
+        ;;
+      -s | --disable-cksfv )
+        CKSFV=0
+        ;;
+      -c | --clean )
+        CLEAN=1
+        ;;
+      -cn | --clean-nfo )
+        CLEAN=1
+        CLEAN_NFO=1
+        ;;
+      -f | --force )
+        FORCE=1
+        ;;
+      -v | --verbose )
+        VERBOSE=1
+        CKSFV_FLAGS="-g"
+        ;;
+      -q | --quiet )
+        VERBOSE=0
+        QUIET=1
+        ;;
+      --full-path )
+        UNRAR_METHOD="x"
+        ;;
+      -7 | --7zip)
+        # to ensure that if --dry and then --7zip are used then we still do a dry run
+        if [ "$UNRARALL_BIN" != 'echo' ]; then
+          UNRARALL_BIN=7z
+        fi
+        ;;
+      *)
+        # user issued unrecognised option
+        message error "Unrecognised option: $1"
+        usage
+        exit 1
+        ;;
+    esac
+  else
+    #Handle mandatory argument
+    DIR="$1"
+
+  fi
+    shift
 done
 
 # Current Dir check

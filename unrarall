@@ -56,7 +56,6 @@ OPTIONS
 -s, --disable-cksfv      Use cksfv (if present) to check the CRC of the downloaded files (if present) before extracting
 -c, --clean      Clean after unrar, this means all rar files but also any sfv file. If the extraction fails then the directory will NOT be cleaned. Use --force to override this.
 -cn, --clean-nfo Clean nfo files, implies --clean.
--d, --dir        Use directory DIRECTORY. If this argument is not supplied the current working directory is used.
 -f, --force      Force unrar even if sfv check failed and if --clean will clean even if unrar fails.
 --full-path      Extract full path inside rar files instead of just extracting the files in the rar file which is the default behaviour.
 -h, --help       Displays this help message and exits.

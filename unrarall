@@ -42,7 +42,7 @@ function usage()
          ${UNRARALL_EXECUTABLE_NAME} --version
 
   Usage (short options):
-         ${UNRARALL_EXECUTABLE_NAME}  [ -c | -cn ] [-f] [ -v | -q ] [-7] [-e] [-s]
+         ${UNRARALL_EXECUTABLE_NAME}  [ -c | -cn ] [-f] [ -v | -q ] [-7] [-e] [-s] <DIRECTORY>
          ${UNRARALL_EXECUTABLE_NAME} -h
 DESCRIPTON
 ${UNRARALL_EXECUTABLE_NAME} is a utility to unrar and cleanup (delete) all rar files within a directory <DIRECTORY>. Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.

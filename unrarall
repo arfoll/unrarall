@@ -81,9 +81,9 @@ VERSION: $UNRARALL_VERSION
 
 function clean-up
 {
-	#perform any necessary clean up
-	message error "${UNRARALL_EXECUTABLE_NAME} is exiting"
-	exit 1;
+  #perform any necessary clean up
+  message error "${UNRARALL_EXECUTABLE_NAME} is exiting"
+  exit 1;
 }
 
 #Catch exit signals
@@ -356,8 +356,6 @@ if [ "${DIR}" == "." ]; then
   DIR="`pwd`"
 fi
 
-
-
 #If No user specified binary, cycle through array and try and find a binary that can be used
 if [ -z "${UNRARALL_BIN}" ]; then
   for (( index=0; index < ${#UNRAR_BINARIES[@]}; index++)); do
@@ -369,20 +367,20 @@ if [ -z "${UNRARALL_BIN}" ]; then
       [ $VERBOSE -eq 1 ] && message ok "found"
       break;
     else
-    	[ $VERBOSE -eq 1 ] && message error "not found"
+      [ $VERBOSE -eq 1 ] && message error "not found"
     fi
 
     #check if end of list
     if [ $index -eq $(( ${#UNRAR_BINARIES[@]} -1)) ]; then
-	message error "Failed to find binary to perform rar extraction. The following binaries were looked for ${UNRAR_BINARIES[*]}"
-	exit 1;
+      message error "Failed to find binary to perform rar extraction. The following binaries were looked for ${UNRAR_BINARIES[*]}"
+      exit 1;
     fi
   done
 else
   #check the manually specified binary exists
   if ! type -P ${UNRARALL_BIN} 2>&1 > /dev/null ; then
-  	message error "The manually specified binary ${UNRARALL_BIN} cannot be found"
-	exit 1;
+    message error "The manually specified binary ${UNRARALL_BIN} cannot be found"
+    exit 1;
   fi
 fi
 

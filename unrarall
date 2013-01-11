@@ -165,6 +165,18 @@ function find-regex-escape()
   set -o noglob
 }
 
+#Helper function for hooks to remove a single file/folder
+# unrarall-remove-file <FILE> <HOOKNAME>
+function unrarall-remove-file-or-folder()
+{
+      if [ -f "./${1}" -o -d "./${1}" ]; then
+        [ "$VERBOSE" -eq 1 ] && message nnl "Hook ${2}: Found ${1} . Attempting to remove..."
+        rm -rf $( [ "$VERBOSE" -eq 1 ] && echo '--verbose') "./${1}"
+        [ $? -ne 0 ] && message error "Could not remove ${1}" || message ok "Success"
+      else
+        [ "$VERBOSE" -eq 1 ] && message info "Hook ${2}: No ${1} file/folder found."
+      fi
+}
 
 #Start of clean-up hooks
 # unrarall-clean-* <MODE> <SFILENAME>
@@ -214,7 +226,7 @@ function unrarall-clean-osx_junk()
       echo "Removes junk OSX files" 
     ;;
     clean)
-      message error "STUB: Not yet implemented hook osx_junk"
+      unrarall-remove-file-or-folder ".DS_Store" "osx_junk"
     ;;
     *)
       message error "Could not execute osx_junk hook"
@@ -229,7 +241,7 @@ function unrarall-clean-windows_junk()
       echo "Removes junk Windows files" 
     ;;
     clean)
-      message error "STUB: Not yet implemented hook windows_junk"
+      unrarall-remove-file-or-folder "Thumbs.db" "windows_junk"
     ;;
     *)
       message error "Could not execute windows_junk hook"

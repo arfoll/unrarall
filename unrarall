@@ -414,13 +414,12 @@ for file in $(find "$DIR" -name '*.rar'); do
   if [[ "$file" =~ .part[0-9]+.rar$ ]]; then
     if [[ "$file" =~ .part0*1.rar$ ]]; then
       sfilename=`echo "$sfilename" | sed 's/.part[0-9]*$//'`
-      message info "Using rar 3.x split archive format"
+      [ $VERBOSE -eq 1 ] && message info "Using rar 3.x split archive format"
     else
       continue
     fi
   fi
   let COUNT=COUNT+1
-  message nnl "Extracting (${UNRAR_METHOD}) \"$file\"..."
   dirname=`dirname "$file"`
 
   # move to directory
@@ -431,6 +430,7 @@ for file in $(find "$DIR" -name '*.rar'); do
     # check an sfv file is present
     if [ -e "${sfilename}.sfv" ]; then
       if type -P cksfv 2>&1 > /dev/null ; then
+        message info "Running cksfv using ${sfilename}.sfv"
         eval cksfv ${CKSFV_FLAGS} "${sfilename}.sfv"
         # CKSFV will print error message even with -q on error
         SUCCESS=$?
@@ -443,6 +443,7 @@ for file in $(find "$DIR" -name '*.rar'); do
 
   # unrar file if SFV checked out or --force was given
   if [ "$SUCCESS" -eq 0 ] || [ "$FORCE" -eq 1 ]; then
+    message nnl "Extracting (${UNRAR_METHOD}) \"$file\"..."
     if [ "$VERBOSE" -eq 1 ]; then
       ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) "$filename"
     else
@@ -476,7 +477,7 @@ for file in $(find "$DIR" -name '*.rar'); do
         done
       fi
     else
-        message error "Couldn't do requested clean because ${UNRARALL_BIN} extracted unsuccessfully. Use --force to override this behaviour"
+      message error "Couldn't do requested clean because ${UNRARALL_BIN} extracted unsuccessfully. Use --force to override this behaviour"
     fi
   fi
 
@@ -487,8 +488,8 @@ IFS=$IFS_TEMP
 if [ "$QUIET" -ne 1 ]; then
   if [ "$COUNT" -ne 0 ]; then
     EXIT_PHRASE="found and extracted"
-    if [ "$CLEAN" -eq 1 ]; then
-      EXIT_PHRASE="found, extracted and removed"
+    if [ ${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[0]} != "none" ]; then
+      EXIT_PHRASE="found, extracted and then cleaned using the following hooks: ${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[*]}"
     fi
     message info "$COUNT rar files $EXIT_PHRASE"
   else

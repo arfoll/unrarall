@@ -270,14 +270,14 @@ function unrarall-clean-sample_videos()
 {
   case "$1" in
     help)
-      echo "Removes video files with \"sample\" as a prefix" 
+      echo "Removes video files with \"sample\" as a prefix and a similar name to the rar file (without extension)" 
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing video files with \"sample\" prefix"
-      find . -type f -iregex '^\./sample.+\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$'
+      find . -type f -iregex '^\./sample.*'"$(find-regex-escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$'
     ;;
     *)
-      message error "Could not execute sample_folders hook"
+      message error "Could not execute sample_videos hook"
     ;;
   esac
 }

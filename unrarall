@@ -205,7 +205,7 @@ function unrarall-clean-rar()
 {
   case "$1" in
     help)
-      echo "Removes rar files" 
+      echo "Removes rar files and sfv files" 
     ;;
     clean)
       [ $VERBOSE -eq 1 ] && message info "Deleting ${2} rar files..."
@@ -282,20 +282,6 @@ function unrarall-clean-sample_videos()
   esac
 }
 
-function unrarall-clean-sfv()
-{
-  case "$1" in
-    help)
-      echo "Removes .sfv files" 
-    ;;
-    clean)
-      message error "STUB: Not yet implemented hook sfv"
-    ;;
-    *)
-      message error "Could not execute sfv hook"
-    ;;
-  esac
-}
 #end of clean-up hooks
 
 

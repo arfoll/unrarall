@@ -413,7 +413,7 @@ for file in $(find "$DIR" -name '*.rar'); do
   # if rar is of style partxx.rar then only extract $filename.part01.rar
   if [[ "$file" =~ .part[0-9]+.rar$ ]]; then
     if [[ "$file" =~ .part0*1.rar$ ]]; then
-      sfilename=`echo "$sfilename" | sed 's/.part[0-9]*$//'`
+      sfilename=`echo "$sfilename" | sed 's/\.part[0-9]\+$//'`
       [ $VERBOSE -eq 1 ] && message info "Using rar 3.x split archive format"
     else
       continue

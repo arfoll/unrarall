@@ -453,11 +453,13 @@ for file in $(find "$DIR" -name '*.rar'); do
   fi
 
   # if fail remove from count
-  if [ "$SUCCESS" -eq 0 ]; then
+  if [ "$SUCCESS" -eq 0 ] && [ "$FORCE" -eq 0 ] ; then
     message ok "ok";
+  elif [ "$SUCCESS" -eq 0 ] && [ "$FORCE" -eq 1 ] ; then
+    message ok "ok (forced)";
   else
     let COUNT=COUNT-1
-    message error "failed"
+    [ "$FORCE" -eq 0 ] && message error "failed" || message error "failed (forced)"
   fi
 
   #Perform clean up if necessary

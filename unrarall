@@ -154,6 +154,18 @@ function detect-clean-up-hooks()
   done
 }
 
+#Prints out an escaped version of 1st argument for use in find's regex
+#This is emacs style regex
+function find-regex-escape()
+{
+  #Disable globbing so that ? and * do not get expanded in echo
+  set +o noglob
+  echo "$1" | sed 's#\\#\\\\#g ;s/\?/\\?/g ; s/\./\\./g ; s/\+/\\+/g ; s/\*/\\*/g; s/\^/\\^/g ; s/\$/\\$/g; s/\[/\\[/g; s/\]/\\]/g;'
+  #Re-enable globbing
+  set -o noglob
+}
+
+
 #Start of clean-up hooks
 # unrarall-clean-* <MODE> <SFILENAME>
 # <MODE> is either help or clean
@@ -186,7 +198,7 @@ function unrarall-clean-rar()
     clean)
       [ $VERBOSE -eq 1 ] && message info "Deleting ${2} rar files..."
       #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
-      find . -maxdepth 1 -type f -iregex '\./'"$2"'.\(sfv\|[r-z][0-9]+\|rar\|part[0-9]+.rar\)$' -exec ${RM} $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find . -maxdepth 1 -type f -iregex '\./'"$(find-regex-escape "$2")"'\.\(sfv\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute clean-rar hook"

@@ -171,7 +171,7 @@ function unrarall-remove-file-or-folder()
 {
       if [ -f "./${1}" -o -d "./${1}" ]; then
         [ "$VERBOSE" -eq 1 ] && message nnl "Hook ${2}: Found ${1} . Attempting to remove..."
-        rm -rf $( [ "$VERBOSE" -eq 1 ] && echo '--verbose') "./${1}"
+        ${RM} -rf $( [ "$VERBOSE" -eq 1 ] && echo '--verbose') "./${1}"
         [ $? -ne 0 ] && message error "Could not remove ${1}" || message ok "Success"
       else
         [ "$VERBOSE" -eq 1 ] && message info "Hook ${2}: No ${1} file/folder found."

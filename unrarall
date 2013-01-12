@@ -218,7 +218,6 @@ function unrarall-clean-rar()
   esac
 }
 
-
 function unrarall-clean-osx_junk()
 {
   case "$1" in
@@ -249,6 +248,22 @@ function unrarall-clean-windows_junk()
   esac
 }
 
+function unrarall-clean-covers_folders()
+{
+  case "$1" in
+    help)
+      echo "Removes junk Covers folders" 
+    ;;
+    clean)
+      [ "$VERBOSE" -eq 1 ] && message info "Removing all Covers/ folders"
+      find . -type d -iname 'covers' -exec ${RM} $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+    ;;
+    *)
+      message error "Could not execute covers_folders hook"
+    ;;
+  esac
+}
+
 function unrarall-clean-sample_folders()
 {
   case "$1" in
@@ -264,7 +279,6 @@ function unrarall-clean-sample_folders()
     ;;
   esac
 }
-
 
 function unrarall-clean-sample_videos()
 {

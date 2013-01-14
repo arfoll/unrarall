@@ -481,7 +481,7 @@ for file in $(find "$DIR" -name '*.rar'); do
   # unrar file if SFV checked out or --force was given
   if [ "$SUCCESS" -eq 0 ] || [ "$FORCE" -eq 1 ]; then
     message nnl "Extracting (${UNRAR_METHOD}) \"$file\"..."
-    if [ "$VERBOSE" -eq 1 ]; then
+    if [ "$VERBOSE" -eq 1 ] || [ "$UNRARALL_BIN" = "echo" ] ; then
       ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) "$filename"
     else
       ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) "$filename" >/dev/null

@@ -206,7 +206,7 @@ function unrarall-clean-rar()
     clean)
       [ $VERBOSE -eq 1 ] && message info "Deleting ${2} rar files..."
       #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
-      find . -maxdepth 1 -type f -iregex '\./'"$(find-regex-escape "$2")"'\.\(sfv\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find . -maxdepth 1 -type f -iregex '\./'"$(find-regex-escape "$2")"'\.\(sfv\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute clean-rar hook"
@@ -252,7 +252,7 @@ function unrarall-clean-covers_folders()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing all Covers/ folders"
-      find . -type d -iname 'covers' -exec ${RM} $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find . -type d -iname 'covers' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute covers_folders hook"
@@ -268,7 +268,7 @@ function unrarall-clean-sample_folders()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing all Sample/ folders"
-      find . -type d -iname 'sample' -exec ${RM} $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find . -type d -iname 'sample' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute sample_folders hook"
@@ -284,7 +284,7 @@ function unrarall-clean-sample_videos()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing video files with \"sample\" prefix"
-      find . -type f -iregex '^\./sample.*'"$(find-regex-escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$' -exec ${RM} $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find . -type f -iregex '^\./sample.*'"$(find-regex-escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute sample_videos hook"

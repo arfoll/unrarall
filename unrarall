@@ -42,7 +42,7 @@ function usage()
          ${UNRARALL_EXECUTABLE_NAME} --version
 
   Usage (short options):
-         ${UNRARALL_EXECUTABLE_NAME}  [-f] [ -v | -q ] [-7] [-e] [-s] <DIRECTORY>
+         ${UNRARALL_EXECUTABLE_NAME}  [-f] [ -v | -q ] [-7] [-d] [-s] <DIRECTORY>
          ${UNRARALL_EXECUTABLE_NAME} -h
 DESCRIPTON
 ${UNRARALL_EXECUTABLE_NAME} is a utility to unrar and clean up various files (.e.g. rar files). Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.
@@ -52,7 +52,7 @@ Use --clean= if you want to cleanup (delete files/folders). Otherwise no cleanin
 OPTIONS
 
 -7, --7zip       Force using 7zip instead of trying to automatically find a program to extract the rar files.
--e, --dry        Dry run of unrar and cleaning. No action will actually be performed.
+-d, --dry        Dry run of unrar and cleaning. No action will actually be performed.
 -s, --disable-cksfv      Use cksfv (if present) to check the CRC of the downloaded files (if present) before extracting
 --clean=         Clean if unrar extraction succeeds (use --force to override). The clean up hooks specified determine what files/folders are removed. By default this is 'none'. Hooks are executed in order specified.
 -f, --force      Force unrar even if sfv check failed and if --clean will clean even if unrar fails.
@@ -313,7 +313,7 @@ while [ -n "$1" ]; do
         echo "$UNRARALL_VERSION"
         exit 0
         ;;
-      -e | --dry )
+      -d | --dry )
         UNRARALL_BIN=echo
         RM="echo"
         ;;

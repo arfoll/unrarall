@@ -45,16 +45,16 @@ function usage()
          ${UNRARALL_EXECUTABLE_NAME}  [-f] [ -v | -q ] [-7] [-e] [-s] <DIRECTORY>
          ${UNRARALL_EXECUTABLE_NAME} -h
 DESCRIPTON
-${UNRARALL_EXECUTABLE_NAME} is a utility to unrar and cleanup (delete) all rar files within a directory <DIRECTORY>. Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.
+${UNRARALL_EXECUTABLE_NAME} is a utility to unrar and clean up various files (.e.g. rar files). Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.
 
-Use --clean if you want to cleanup. Otherwise no cleaning is done. It can also be used to delete rar files that have already been used for extraction with --force. Use with caution!
+Use --clean= if you want to cleanup (delete files/folders). Otherwise no cleaning is done. It can also be used to delete rar files that have already been used for extraction with \"--clean=rar --force\". Use with caution!
 
 OPTIONS
 
 -7, --7zip       Force using 7zip instead of trying to automatically find a program to extract the rar files.
 -e, --dry        Dry run of unrar and cleaning. No action will actually be performed.
 -s, --disable-cksfv      Use cksfv (if present) to check the CRC of the downloaded files (if present) before extracting
---clean=         Clean after if unrar extraction succeeds (use --force to override). The clean up hooks specified determine what files are removed. By default this is 'none'.
+--clean=         Clean if unrar extraction succeeds (use --force to override). The clean up hooks specified determine what files/folders are removed. By default this is 'none'. Hooks are executed in order specified.
 -f, --force      Force unrar even if sfv check failed and if --clean will clean even if unrar fails.
 --full-path      Extract full path inside rar files instead of just extracting the files in the rar file which is the default behaviour.
 -h, --help       Displays this help message and exits.
@@ -70,8 +70,8 @@ for hook in ${UNRARALL_DETECTED_CLEAN_UP_HOOKS[*]} ; do
   echo "$hook : $( unrarall-clean-${hook} help)"
 done
 
-echo "all : Execute all the above hooks"
-echo "none : Do not execute any clean up hooks (default)"
+echo "all : Execute all the above hooks. They are executed in the order they are listed above."
+echo "none : Do not execute any clean up hooks (default)."
 
 
 echo "

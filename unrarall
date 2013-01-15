@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #unrarall
-# Copyright (C) 2011, 2012 Brendan Le Foll <brendan@fridu.net>
-# Copyright (C) 2011, 2012 Dan Liew <dan@su-root.co.uk>
+# Copyright (C) 2011, 2012, 2013 Brendan Le Foll <brendan@fridu.net>
+# Copyright (C) 2011, 2012, 2013 Dan Liew <dan@su-root.co.uk>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -21,9 +21,7 @@
 # Set some defaults
 declare -x DIR=""
 declare -x RM="rm"
-declare -ix CLEAN=0
-declare -ix CLEAN_NFO=0
-declare -rx UNRARALL_VERSION="0.3.2"
+declare -rx UNRARALL_VERSION="0.4.0"
 declare -ix FORCE=0
 declare -ix VERBOSE=0
 declare -ix QUIET=0
@@ -34,45 +32,58 @@ declare -x UNRARALL_BIN="" #Leave empty to let unrarall to loop through UNRAR_BI
 declare -x UNRAR_BINARIES=(unrar 7z) #Array of binaries to try and use, the order here is the order of precedence
 declare -x UNRARALL_PID="$$"
 declare -x UNRARALL_EXECUTABLE_NAME=$(basename $0;)
+declare -ax UNRARALL_DETECTED_CLEAN_UP_HOOKS
+declare -ax UNRARALL_CLEAN_UP_HOOKS_TO_RUN=(none)
 
 function usage()
 {
-  echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean | --clean-nfo ] [ --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv] <DIRECTORY>
+  echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean=<hook>[,<hook>] ] [ --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv] <DIRECTORY>
          ${UNRARALL_EXECUTABLE_NAME} --help
          ${UNRARALL_EXECUTABLE_NAME} --version
 
   Usage (short options):
-         ${UNRARALL_EXECUTABLE_NAME}  [ -c | -cn ] [-f] [ -v | -q ] [-7] [-e] [-s] <DIRECTORY>
+         ${UNRARALL_EXECUTABLE_NAME}  [-f] [ -v | -q ] [-7] [-d] [-s] <DIRECTORY>
          ${UNRARALL_EXECUTABLE_NAME} -h
 DESCRIPTON
-${UNRARALL_EXECUTABLE_NAME} is a utility to unrar and cleanup (delete) all rar files within a directory <DIRECTORY>. Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.
+${UNRARALL_EXECUTABLE_NAME} is a utility to unrar and clean up various files (.e.g. rar files). Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.
 
-Use --clean if you want to cleanup. Otherwise no cleaning is done. It can also be used to delete rar files that have already been used for extraction with --force. Use with caution!
+Use --clean= if you want to cleanup (delete files/folders). Otherwise no cleaning is done. It can also be used to delete rar files that have already been used for extraction with \"--clean=rar --force\". Use with caution!
 
 OPTIONS
 
 -7, --7zip       Force using 7zip instead of trying to automatically find a program to extract the rar files.
--e, --dry        Dry run of unrar and cleaning. No action will actually be performed.
+-d, --dry        Dry run of unrar and cleaning. No action will actually be performed.
 -s, --disable-cksfv      Use cksfv (if present) to check the CRC of the downloaded files (if present) before extracting
--c, --clean      Clean after unrar, this means all rar files but also any sfv file. If the extraction fails then the directory will NOT be cleaned. Use --force to override this.
--cn, --clean-nfo Clean nfo files, implies --clean.
+--clean=         Clean if unrar extraction succeeds (use --force to override). The clean up hooks specified determine what files/folders are removed. By default this is 'none'. Hooks are executed in order specified.
 -f, --force      Force unrar even if sfv check failed and if --clean will clean even if unrar fails.
 --full-path      Extract full path inside rar files instead of just extracting the files in the rar file which is the default behaviour.
 -h, --help       Displays this help message and exits.
 -v, --verbose    Show extraction progress as ${UNRARALL_EXECUTABLE_NAME} executes. This is not done by default
 -q, --quiet      Be completely quiet. No output will be written to the screen
 --version        Give version information version.
+"
 
+#List the detected clean up hooks with their help information
+detect-clean-up-hooks
+echo "CLEAN UP HOOKS"
+for hook in ${UNRARALL_DETECTED_CLEAN_UP_HOOKS[*]} ; do
+  echo "$hook : $( unrarall-clean-${hook} help)"
+done
+
+echo "all : Execute all the above hooks. They are executed in the order they are listed above."
+echo "none : Do not execute any clean up hooks (default)."
+
+
+echo "
 VERSION: $UNRARALL_VERSION
-
 "
 }
 
 function clean-up
 {
-	#perform any necessary clean up
-	message error "${UNRARALL_EXECUTABLE_NAME} is exiting"
-	exit 1;
+  #perform any necessary clean up
+  message error "${UNRARALL_EXECUTABLE_NAME} is exiting"
+  exit 1;
 }
 
 #Catch exit signals
@@ -131,6 +142,159 @@ function getUnrarFlags()
   esac
 }
 
+function detect-clean-up-hooks()
+{
+  [ $VERBOSE -eq 1 ] && message info "Detecting clean up hooks..."
+  HOOKS=$(declare -F | grep -Eo ' unrarall-clean-[_a-z-]+')
+  index=0
+  for hook in $HOOKS ;do 
+    [ $VERBOSE -eq 1 ] && message info "Found $hook"; 
+    UNRARALL_DETECTED_CLEAN_UP_HOOKS[$index]=$( echo "$hook" | sed 's/unrarall-clean-//')
+    ((index++))
+  done
+}
+
+#Prints out an escaped version of 1st argument for use in find's regex
+#This is emacs style regex
+function find-regex-escape()
+{
+  echo "$1" | sed 's#\\#\\\\#g ;s/\?/\\?/g ; s/\./\\./g ; s/\+/\\+/g ; s/\*/\\*/g; s/\^/\\^/g ; s/\$/\\$/g; s/\[/\\[/g; s/\]/\\]/g;'
+}
+
+#Helper function for hooks to remove a single file/folder
+# unrarall-remove-file <FILE> <HOOKNAME>
+function unrarall-remove-file-or-folder()
+{
+      if [ -f "./${1}" -o -d "./${1}" ]; then
+        [ "$VERBOSE" -eq 1 ] && message nnl "Hook ${2}: Found ${1} . Attempting to remove..."
+        ${RM} -rf $( [ "$VERBOSE" -eq 1 ] && echo '--verbose') "./${1}"
+        [ $? -ne 0 ] && message error "Could not remove ${1}" || message ok "Success"
+      else
+        [ "$VERBOSE" -eq 1 ] && message info "Hook ${2}: No ${1} file/folder found."
+      fi
+}
+
+#Start of clean-up hooks
+# unrarall-clean-* <MODE> <SFILENAME>
+# <MODE> is either help or clean
+# <SFILENAME> is the name of the rar file but with rar suffix removed
+# Hooks should use ${RM} instead of the 'rm' command
+# Hooks cannot be named "all" or "none" as these are reserved.
+
+function unrarall-clean-nfo()
+{
+  case "$1" in
+    help)
+      echo "Removes .nfo files with the same name as the .rar file" 
+    ;;
+    clean)
+      [ $VERBOSE -eq 1 ] && message info "Deleting ${2}.nfo"
+      ${RM} -f "${2}.nfo"
+    ;;
+    *)
+      message error "Could not execute clean-nfo hook"
+    ;;
+  esac
+}
+
+function unrarall-clean-rar()
+{
+  case "$1" in
+    help)
+      echo "Removes rar files and sfv files" 
+    ;;
+    clean)
+      [ $VERBOSE -eq 1 ] && message info "Deleting ${2} rar files..."
+      #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
+      find . -maxdepth 1 -type f -iregex '\./'"$(find-regex-escape "$2")"'\.\(sfv\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+    ;;
+    *)
+      message error "Could not execute clean-rar hook"
+    ;;
+  esac
+}
+
+function unrarall-clean-osx_junk()
+{
+  case "$1" in
+    help)
+      echo "Removes junk OSX files" 
+    ;;
+    clean)
+      unrarall-remove-file-or-folder ".DS_Store" "osx_junk"
+    ;;
+    *)
+      message error "Could not execute osx_junk hook"
+    ;;
+  esac
+}
+
+function unrarall-clean-windows_junk()
+{
+  case "$1" in
+    help)
+      echo "Removes junk Windows files" 
+    ;;
+    clean)
+      unrarall-remove-file-or-folder "Thumbs.db" "windows_junk"
+    ;;
+    *)
+      message error "Could not execute windows_junk hook"
+    ;;
+  esac
+}
+
+function unrarall-clean-covers_folders()
+{
+  case "$1" in
+    help)
+      echo "Removes junk Covers folders" 
+    ;;
+    clean)
+      [ "$VERBOSE" -eq 1 ] && message info "Removing all Covers/ folders"
+      find . -type d -iname 'covers' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+    ;;
+    *)
+      message error "Could not execute covers_folders hook"
+    ;;
+  esac
+}
+
+function unrarall-clean-sample_folders()
+{
+  case "$1" in
+    help)
+      echo "Removes Sample folders" 
+    ;;
+    clean)
+      [ "$VERBOSE" -eq 1 ] && message info "Removing all Sample/ folders"
+      find . -type d -iname 'sample' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+    ;;
+    *)
+      message error "Could not execute sample_folders hook"
+    ;;
+  esac
+}
+
+function unrarall-clean-sample_videos()
+{
+  case "$1" in
+    help)
+      echo "Removes video files with \"sample\" as a prefix and a similar name to the rar file (without extension)" 
+    ;;
+    clean)
+      [ "$VERBOSE" -eq 1 ] && message info "Removing video files with \"sample\" prefix"
+      find . -type f -iregex '^\./sample.*'"$(find-regex-escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+    ;;
+    *)
+      message error "Could not execute sample_videos hook"
+    ;;
+  esac
+}
+
+#end of clean-up hooks
+
+
 # Parse command line arguments
 if [ "$#" -lt 1 ]; then
   message error "Insufficient number of arguments. See ${UNRARALL_EXECUTABLE_NAME} --help"
@@ -149,19 +313,20 @@ while [ -n "$1" ]; do
         echo "$UNRARALL_VERSION"
         exit 0
         ;;
-      -e | --dry )
+      -d | --dry )
         UNRARALL_BIN=echo
         RM="echo"
         ;;
       -s | --disable-cksfv )
         CKSFV=0
         ;;
-      -c | --clean )
-        CLEAN=1
-        ;;
-      -cn | --clean-nfo )
-        CLEAN=1
-        CLEAN_NFO=1
+      --clean=*)
+        index=0;
+        for hook in $( echo "$1" | sed 's/--clean=//' | tr , " ") ; do
+          UNRARALL_CLEAN_UP_HOOKS_TO_RUN[$index]="$hook"
+          ((index++))
+        done
+        [ $index -eq 0 ] && { message error "Clean up hooks must be specified when using --clean="; exit 1; }
         ;;
       -f | --force )
         FORCE=1
@@ -198,11 +363,35 @@ while [ -n "$1" ]; do
     shift
 done
 
+detect-clean-up-hooks
+
+#Verify selected clean-up hooks are ok
+if [ ${#UNRARALL_CLEAN_UP_HOOKS_TO_RUN[*]} -eq 1 ] && [ $( echo "${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[0]}" | grep -Ec '^(all|none)$' ) -eq 1 ] ; then
+  #Don't need to do anything
+  [ $VERBOSE -eq 1 ] && message info "Using virtual clean-up hook ${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[0]}"
+else
+  #Loop through clean up hooks and check it's allowed
+  for hook_to_use in ${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[*]} ; do
+    HOOK_FOUND=0
+    for hook in ${UNRARALL_DETECTED_CLEAN_UP_HOOKS[*]}; do
+      if [ "$hook_to_use" = "$hook" ]; then
+        HOOK_FOUND=1
+        break;
+      fi
+    done
+
+    if [ $HOOK_FOUND -eq 0 ]; then
+      message error "Hook $hook_to_use is not a valid clean up hook. See --help"
+      exit 1;
+    fi
+
+  done
+fi
+
 # Current Dir check
 if [ "${DIR}" == "." ]; then
   DIR="`pwd`"
 fi
-
 
 #If No user specified binary, cycle through array and try and find a binary that can be used
 if [ -z "${UNRARALL_BIN}" ]; then
@@ -215,20 +404,20 @@ if [ -z "${UNRARALL_BIN}" ]; then
       [ $VERBOSE -eq 1 ] && message ok "found"
       break;
     else
-    	[ $VERBOSE -eq 1 ] && message error "not found"
+      [ $VERBOSE -eq 1 ] && message error "not found"
     fi
 
     #check if end of list
     if [ $index -eq $(( ${#UNRAR_BINARIES[@]} -1)) ]; then
-	message error "Failed to find binary to perform rar extraction. The following binaries were looked for ${UNRAR_BINARIES[*]}"
-	exit 1;
+      message error "Failed to find binary to perform rar extraction. The following binaries were looked for ${UNRAR_BINARIES[*]}"
+      exit 1;
     fi
   done
 else
   #check the manually specified binary exists
   if ! type -P ${UNRARALL_BIN} 2>&1 > /dev/null ; then
-  	message error "The manually specified binary ${UNRARALL_BIN} cannot be found"
-	exit 1;
+    message error "The manually specified binary ${UNRARALL_BIN} cannot be found"
+    exit 1;
   fi
 fi
 
@@ -261,14 +450,13 @@ for file in $(find "$DIR" -name '*.rar'); do
   # if rar is of style partxx.rar then only extract $filename.part01.rar
   if [[ "$file" =~ .part[0-9]+.rar$ ]]; then
     if [[ "$file" =~ .part0*1.rar$ ]]; then
-      sfilename=`echo "$sfilename" | sed 's/.part[0-9]*$//'`
-      message info "Using rar 3.x split archive format"
+      sfilename=`echo "$sfilename" | sed 's/\.part[0-9]\+$//'`
+      [ $VERBOSE -eq 1 ] && message info "Using rar 3.x split archive format"
     else
       continue
     fi
   fi
   let COUNT=COUNT+1
-  message nnl "Extracting (${UNRAR_METHOD}) \"$file\"..."
   dirname=`dirname "$file"`
 
   # move to directory
@@ -279,6 +467,7 @@ for file in $(find "$DIR" -name '*.rar'); do
     # check an sfv file is present
     if [ -e "${sfilename}.sfv" ]; then
       if type -P cksfv 2>&1 > /dev/null ; then
+        message info "Running cksfv using ${sfilename}.sfv"
         eval cksfv ${CKSFV_FLAGS} "${sfilename}.sfv"
         # CKSFV will print error message even with -q on error
         SUCCESS=$?
@@ -291,7 +480,8 @@ for file in $(find "$DIR" -name '*.rar'); do
 
   # unrar file if SFV checked out or --force was given
   if [ "$SUCCESS" -eq 0 ] || [ "$FORCE" -eq 1 ]; then
-    if [ "$VERBOSE" -eq 1 ]; then
+    message nnl "Extracting (${UNRAR_METHOD}) \"$file\"..."
+    if [ "$VERBOSE" -eq 1 ] || [ "$UNRARALL_BIN" = "echo" ] ; then
       ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) "$filename"
     else
       ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) "$filename" >/dev/null
@@ -300,26 +490,38 @@ for file in $(find "$DIR" -name '*.rar'); do
   fi
 
   # if fail remove from count
-  if [ "$SUCCESS" -eq 0 ]; then
+  if [ "$SUCCESS" -eq 0 ] && [ "$FORCE" -eq 0 ] ; then
     message ok "ok";
+  elif [ "$SUCCESS" -eq 0 ] && [ "$FORCE" -eq 1 ] ; then
+    message ok "ok (forced)";
   else
     let COUNT=COUNT-1
-    message error "failed"
+    [ "$FORCE" -eq 0 ] && message error "failed" || message error "failed (forced)"
   fi
 
-  # cleanup all rar files in the current directory
-  if [ "$CLEAN" -eq 1 ] ; then
-    if [ "$SUCCESS" -eq "0" ] || [ "$FORCE" -eq 1 ]; then
-      message info "Cleaning $file using $sfilename"
-      #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
-      find . -maxdepth 1 -type f -iregex '\./'"$sfilename"'.\(sfv\|[r-z][0-9]+\|rar\|part[0-9]+.rar\)$' -exec ${RM} $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
-      if [ "$CLEAN_NFO" -eq 1 ]; then
-        rm -f ${sfilename}.nfo
+  #Perform clean up if necessary
+  if [ ${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[0]} != "none" ]; then
+    if  [ "$SUCCESS" -eq 0 ] || [ "$FORCE" -eq 1 ] ; then
+      message nnl "Running hooks..."
+      if [ ${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[0]} = "all" ]; then
+        #Run every clean up hook
+        for hook in ${UNRARALL_DETECTED_CLEAN_UP_HOOKS[*]} ; do
+          message nnl "$hook "
+          ( unrarall-clean-$hook clean $sfilename )
+        done
+      else
+        #Run selected clean up hooks
+        for hook in ${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[*]} ; do
+          message nnl "$hook "
+          ( unrarall-clean-$hook clean $sfilename )
+        done
       fi
+      message ok "Finished running hooks"
     else
       message error "Couldn't do requested clean because ${UNRARALL_BIN} extracted unsuccessfully. Use --force to override this behaviour"
     fi
   fi
+
   cd "$CURRENT_DIR"
 done
 IFS=$IFS_TEMP
@@ -327,8 +529,8 @@ IFS=$IFS_TEMP
 if [ "$QUIET" -ne 1 ]; then
   if [ "$COUNT" -ne 0 ]; then
     EXIT_PHRASE="found and extracted"
-    if [ "$CLEAN" -eq 1 ]; then
-      EXIT_PHRASE="found, extracted and removed"
+    if [ ${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[0]} != "none" ]; then
+      EXIT_PHRASE="found, extracted and then cleaned using the following hooks: ${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[*]}"
     fi
     message info "$COUNT rar files $EXIT_PHRASE"
   else

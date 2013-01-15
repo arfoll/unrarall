@@ -12,6 +12,43 @@ RAR archives before 3.x used the naming format .[r-z][0-9][0-9]. This was probab
 
 This is a bash script and so is fairly unix friendly, however all testing by developers is done on Bash4+. We do however try and maintain Bash3+ compatibility mostly for OS X users who do not want to change their shell.
 
+== Clean up hooks ==
+
+Unrarall provides a modular approach to cleaning up unwanted files by providing clean up hooks. A clean up hook is simply a bash function who's name is of the form "unrarall-clean-<hook>" where "<hook>" is the name of the hook. The hook should have two behaviours. 
+
+1. Produce help information that informs a user what the hook does. This information is shown when a user uses --help on unrarall.
+2. Perform the clean up. The writer of the hook may assume the current directory is the directory containing the rar files that have just been extracted.
+
+The user of unararall can choose what hooks they would like to use by specifying the names of the hooks in the --clean= option.
+
+A programmer wishing to add their own hook simply needs to add a hook in the correct section of the unrarall script. 
+Please note that the hook must implement the interface expected by the unrarall script (see source code for details).
+Unrarall will automatically detect the added hook.
+
+Alternatively it is possible define unrarall hooks outside the unrarall script as follows.
+
+1. Define the function .e.g.
+
+function unrarall-clean-dummy_hook()
+{
+  echo "This hook doesn't do anything"
+}
+
+so that is available is the current shell. You can get a list of available functions by running 
+
+$ declare -F
+
+2. Export the function so it will be available to sub shells. For example this can be done by running
+
+$ declare -fx unrarall-clean-dummy_hook
+
+3. You can test that unrarall knows about your hook by running
+
+$ unrarall --help
+
+Under the list of clean up hooks your newely created hook should be listed.
+
+
 == More ==
 
 A reverse engineered specification of the rar format is available here:

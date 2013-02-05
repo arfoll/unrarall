@@ -21,7 +21,7 @@
 # Set some defaults
 declare -x DIR=""
 declare -x RM="rm"
-declare -rx UNRARALL_VERSION="0.4.0"
+declare -rx UNRARALL_VERSION="0.4.1"
 declare -ix FORCE=0
 declare -ix VERBOSE=0
 declare -ix QUIET=0
@@ -206,7 +206,7 @@ function unrarall-clean-rar()
     clean)
       [ $VERBOSE -eq 1 ] && message info "Deleting ${2} rar files..."
       #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
-      find . -maxdepth 1 -type f -iregex '\./'"$(find-regex-escape "$2")"'\.\(sfv\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find . -maxdepth 1 -type f -iregex '\./'"$(find-regex-escape "$2")"'\.\(sfv\|[0-9]+\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute clean-rar hook"
@@ -440,18 +440,32 @@ COUNT=0
 #modify IFS for new lines so filenames with spaces do not get split
 IFS_TEMP=$IFS
 IFS=$(echo -en "\n\b")
+MATCHRARMIME='x-rar\;\ charset=binary$'
 
 # assuming only the .rar files are of interest
-for file in $(find "$DIR" -name '*.rar'); do
-  filename=`basename "$file"`
-  # Strip .rar extension off filename
-  sfilename="${filename%.rar}"
+for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
+
+  # check file really is a rar file
+  if [[ ! "`file --mime "${file}"`" =~ $MATCHRARMIME ]]; then
+    continue
+  fi
+
+  filename=`basename "${file}"`
+  # Strip extension off filename
+  sfilename="${filename%.*}"
 
   # if rar is of style partxx.rar then only extract $filename.part01.rar
   if [[ "$file" =~ .part[0-9]+.rar$ ]]; then
     if [[ "$file" =~ .part0*1.rar$ ]]; then
       sfilename=`echo "$sfilename" | sed 's/\.part[0-9]\+$//'`
       [ $VERBOSE -eq 1 ] && message info "Using rar 3.x split archive format"
+    else
+      continue
+    fi
+  # allow rar archives with .001 -> .999 naming
+  elif [[ "$file" =~ .[0-9][0-9][0-9]$ ]]; then
+    if [[ "$file" =~ .001$ ]]; then
+      message info "Your packager is wrong, 001 is not an acceptable filename for a rar file. We'll attempt to clean up his mess anyways..." 
     else
       continue
     fi

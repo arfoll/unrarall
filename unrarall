@@ -443,7 +443,7 @@ IFS=$(echo -en "\n\b")
 MATCHRARMIME='x-rar\;\ charset=binary$'
 
 # assuming only the .rar files are of interest
-for file in $(find "$DIR" -name '*.[r0][a0][r1]'); do
+for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
 
   # check file really is a rar file
   if [[ ! "`file --mime "${file}"`" =~ $MATCHRARMIME ]]; then

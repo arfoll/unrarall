@@ -447,6 +447,7 @@ for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
 
   # check file really is a rar file
   if [[ ! "`file --mime "${file}"`" =~ $MATCHRARMIME ]]; then
+    message error "Skiping file \"${file}\" because it does not appear to be a valid rar file."
     continue
   fi
 

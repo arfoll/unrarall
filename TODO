@@ -1,6 +1,3 @@
 TODO list for unrarall
 
-Implement as hook to iscp
-Check .sfv file if present
-Remove NFO files
-
+- zip support?

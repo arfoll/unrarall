@@ -442,6 +442,13 @@ IFS_TEMP=$IFS
 IFS=$(echo -en "\n\b")
 MATCHRARMIME='x-rar\;\ charset=binary$'
 
+if [ "$CKSFV" -eq 1 ]; then
+  if ! type -P cksfv 2>&1 > /dev/null ; then
+    message info "Install cksfv in order to get CRC checked before using unrar"
+    CKSFV=0
+  fi
+fi
+
 # assuming only the .rar files are of interest
 for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
 
@@ -481,15 +488,10 @@ for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
   if [ "$CKSFV" -eq 1 ]; then
     # check an sfv file is present
     if [ -e "${sfilename}.sfv" ]; then
-      if type -P cksfv 2>&1 > /dev/null ; then
-        message info "Running cksfv using ${sfilename}.sfv"
-        eval cksfv ${CKSFV_FLAGS} "${sfilename}.sfv"
-        # CKSFV will print error message even with -q on error
-        SUCCESS=$?
-      else
-        message info "Install cksfv in order to get CRC checked before using unrar"
-        SUCCESS=0
-      fi
+      message info "Running cksfv using ${sfilename}.sfv"
+      eval cksfv ${CKSFV_FLAGS} "${sfilename}.sfv"
+      # CKSFV will print error message even with -q on error
+      SUCCESS=$?
     fi
   fi
 

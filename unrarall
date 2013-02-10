@@ -445,12 +445,6 @@ MATCHRARMIME='x-rar\;\ charset=binary$'
 # assuming only the .rar files are of interest
 for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
 
-  # check file really is a rar file
-  if [[ ! "`file --mime "${file}"`" =~ $MATCHRARMIME ]]; then
-    message error "Skiping file \"${file}\" because it does not appear to be a valid rar file."
-    continue
-  fi
-
   filename=`basename "${file}"`
   # Strip extension off filename
   sfilename="${filename%.*}"
@@ -473,6 +467,12 @@ for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
   fi
   let COUNT=COUNT+1
   dirname=`dirname "$file"`
+
+  # check file really is a rar file
+  if [[ ! "`file --mime "${file}"`" =~ $MATCHRARMIME ]]; then
+    message error "Skipping file \"${file}\" because it does not appear to be a valid rar file."
+    continue
+  fi
 
   # move to directory
   cd "$dirname"

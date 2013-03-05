@@ -147,8 +147,8 @@ function detect-clean-up-hooks()
   [ $VERBOSE -eq 1 ] && message info "Detecting clean up hooks..."
   HOOKS=$(declare -F | grep -Eo ' unrarall-clean-[_a-z-]+')
   index=0
-  for hook in $HOOKS ;do 
-    [ $VERBOSE -eq 1 ] && message info "Found $hook"; 
+  for hook in $HOOKS ;do
+    [ $VERBOSE -eq 1 ] && message info "Found $hook";
     UNRARALL_DETECTED_CLEAN_UP_HOOKS[$index]=$( echo "$hook" | sed 's/unrarall-clean-//')
     ((index++))
   done
@@ -185,7 +185,7 @@ function unrarall-clean-nfo()
 {
   case "$1" in
     help)
-      echo "Removes .nfo files with the same name as the .rar file" 
+      echo "Removes .nfo files with the same name as the .rar file"
     ;;
     clean)
       [ $VERBOSE -eq 1 ] && message info "Deleting ${2}.nfo"
@@ -201,7 +201,7 @@ function unrarall-clean-rar()
 {
   case "$1" in
     help)
-      echo "Removes rar files and sfv files" 
+      echo "Removes rar files and sfv files"
     ;;
     clean)
       [ $VERBOSE -eq 1 ] && message info "Deleting ${2} rar files..."
@@ -218,7 +218,7 @@ function unrarall-clean-osx_junk()
 {
   case "$1" in
     help)
-      echo "Removes junk OSX files" 
+      echo "Removes junk OSX files"
     ;;
     clean)
       unrarall-remove-file-or-folder ".DS_Store" "osx_junk"
@@ -233,7 +233,7 @@ function unrarall-clean-windows_junk()
 {
   case "$1" in
     help)
-      echo "Removes junk Windows files" 
+      echo "Removes junk Windows files"
     ;;
     clean)
       unrarall-remove-file-or-folder "Thumbs.db" "windows_junk"
@@ -248,7 +248,7 @@ function unrarall-clean-covers_folders()
 {
   case "$1" in
     help)
-      echo "Removes junk Covers folders" 
+      echo "Removes junk Covers folders"
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing all Covers/ folders"
@@ -264,7 +264,7 @@ function unrarall-clean-sample_folders()
 {
   case "$1" in
     help)
-      echo "Removes Sample folders" 
+      echo "Removes Sample folders"
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing all Sample/ folders"
@@ -280,7 +280,7 @@ function unrarall-clean-sample_videos()
 {
   case "$1" in
     help)
-      echo "Removes video files with \"sample\" as a prefix and a similar name to the rar file (without extension)" 
+      echo "Removes video files with \"sample\" as a prefix and a similar name to the rar file (without extension)"
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing video files with \"sample\" prefix"
@@ -467,7 +467,7 @@ for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
   # allow rar archives with .001 -> .999 naming
   elif [[ "$file" =~ .[0-9][0-9][0-9]$ ]]; then
     if [[ "$file" =~ .001$ ]]; then
-      message info "Your packager is wrong, 001 is not an acceptable filename for a rar file. We'll attempt to clean up his mess anyways..." 
+      message info "Your packager is wrong, 001 is not an acceptable filename for a rar file. We'll attempt to clean up his mess anyways..."
     else
       continue
     fi

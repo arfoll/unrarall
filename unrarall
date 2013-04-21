@@ -489,7 +489,7 @@ for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
     # check an sfv file is present
     if [ -e "${sfilename}.sfv" ]; then
       message info "Running cksfv using ${sfilename}.sfv"
-      eval cksfv ${CKSFV_FLAGS} "${sfilename}.sfv"
+      eval cksfv ${CKSFV_FLAGS} \"${sfilename}.sfv\"
       # CKSFV will print error message even with -q on error
       SUCCESS=$?
     fi

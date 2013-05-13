@@ -21,7 +21,7 @@
 # Set some defaults
 declare -x DIR=""
 declare -x RM="rm"
-declare -rx UNRARALL_VERSION="0.4.1"
+declare -rx UNRARALL_VERSION="0.5.0"
 declare -ix FORCE=0
 declare -ix VERBOSE=0
 declare -ix QUIET=0
@@ -37,12 +37,12 @@ declare -ax UNRARALL_CLEAN_UP_HOOKS_TO_RUN=(none)
 
 function usage()
 {
-  echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean=<hook>[,<hook>] ] [ --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv] <DIRECTORY>
+  echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean=<hook>[,<hook>] ] [ --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv] <DIRECTORY> <OUTPUT_DIRECTORY>
          ${UNRARALL_EXECUTABLE_NAME} --help
          ${UNRARALL_EXECUTABLE_NAME} --version
 
   Usage (short options):
-         ${UNRARALL_EXECUTABLE_NAME}  [-f] [ -v | -q ] [-7] [-d] [-s] <DIRECTORY>
+         ${UNRARALL_EXECUTABLE_NAME}  [-f] [ -v | -q ] [-7] [-d] [-s] <DIRECTORY> <OUTPUT_DIRECTORY>
          ${UNRARALL_EXECUTABLE_NAME} -h
 DESCRIPTON
 ${UNRARALL_EXECUTABLE_NAME} is a utility to unrar and clean up various files (.e.g. rar files). Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.
@@ -124,13 +124,17 @@ function getUnrarFlags()
   #$1 is assumed to be unrar binary name
   case "$1" in
     unrar)
-      echo -o+ -y
+      if [ -z "$OUTPUT_DIR" ]; then
+        echo -o+ -y
+      else
+        echo -o+ -y -x
+      fi
     ;;
     7z)
       echo -y
     ;;
     echo)
-      echo
+      echo 
     ;;
     *)
       #This code should only be reached if the programmer has made an error
@@ -175,13 +179,16 @@ function unrarall-remove-file-or-folder()
 }
 
 #Start of clean-up hooks
-# unrarall-clean-* <MODE> <SFILENAME>
+# unrarall-clean-{out,in}* <MODE> <SFILENAME>
 # <MODE> is either help or clean
 # <SFILENAME> is the name of the rar file but with rar suffix removed
 # Hooks should use ${RM} instead of the 'rm' command
 # Hooks cannot be named "all" or "none" as these are reserved.
+# Hooks are either applied on the input folders or the output dir as indicated by the hook name
 
-function unrarall-clean-nfo()
+## Input hooks
+
+function unrarall-clean-in-nfo()
 {
   case "$1" in
     help)
@@ -197,7 +204,7 @@ function unrarall-clean-nfo()
   esac
 }
 
-function unrarall-clean-rar()
+function unrarall-clean-in-rar()
 {
   case "$1" in
     help)
@@ -214,7 +221,9 @@ function unrarall-clean-rar()
   esac
 }
 
-function unrarall-clean-osx_junk()
+## Output hooks
+
+function unrarall-clean-out-osx_junk()
 {
   case "$1" in
     help)
@@ -229,7 +238,7 @@ function unrarall-clean-osx_junk()
   esac
 }
 
-function unrarall-clean-windows_junk()
+function unrarall-clean-out-windows_junk()
 {
   case "$1" in
     help)
@@ -244,7 +253,7 @@ function unrarall-clean-windows_junk()
   esac
 }
 
-function unrarall-clean-covers_folders()
+function unrarall-clean-out-covers_folders()
 {
   case "$1" in
     help)
@@ -252,7 +261,7 @@ function unrarall-clean-covers_folders()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing all Covers/ folders"
-      find . -type d -iname 'covers' -depth -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find . -type d -iname 'covers' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute covers_folders hook"
@@ -260,7 +269,7 @@ function unrarall-clean-covers_folders()
   esac
 }
 
-function unrarall-clean-sample_folders()
+function unrarall-clean-out-sample_folders()
 {
   case "$1" in
     help)
@@ -276,7 +285,7 @@ function unrarall-clean-sample_folders()
   esac
 }
 
-function unrarall-clean-sample_videos()
+function unrarall-clean-out-sample_videos()
 {
   case "$1" in
     help)
@@ -348,6 +357,12 @@ while [ -n "$1" ]; do
           UNRARALL_BIN=7z
         fi
         ;;
+      -o | --output)
+        # output dir has to be given after this arg like -o /tmp
+     	OUTPUT_DIR="$2"
+	    [ $VERBOSE -eq 1 ] && message info "Using ${OUTPUT_DIR} as output directory"
+	shift
+        ;;
       *)
         # user issued unrecognised option
         message error "Unrecognised option: $1"
@@ -356,11 +371,9 @@ while [ -n "$1" ]; do
         ;;
     esac
   else
-    #Handle mandatory argument
     DIR="$1"
-
   fi
-    shift
+  shift
 done
 
 detect-clean-up-hooks
@@ -444,7 +457,7 @@ MATCHRARMIME='x-rar\;\ charset=binary$'
 
 if [ "$CKSFV" -eq 1 ]; then
   if ! type -P cksfv 2>&1 > /dev/null ; then
-    message info "Install cksfv in order to get CRC checked before using unrar"
+    message info "Install cksfv in order to get CRC checked before using unrarall"
     CKSFV=0
   fi
 fi
@@ -478,6 +491,8 @@ for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
   # check file really is a rar file
   if [[ ! "`file --mime "${file}"`" =~ $MATCHRARMIME ]]; then
     message error "Skipping file \"${file}\" because it does not appear to be a valid rar file."
+    # if it's not valid remove 1 from count
+    let COUNT=COUNT-1
     continue
   fi
 
@@ -498,10 +513,13 @@ for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
   # unrar file if SFV checked out or --force was given
   if [ "$SUCCESS" -eq 0 ] || [ "$FORCE" -eq 1 ]; then
     message nnl "Extracting (${UNRAR_METHOD}) \"$file\"..."
+    if [ -z "$OUTPUT_DIR" ]; then
+      OUTPUT_DIR=`dirname "$file"`
+    fi
     if [ "$VERBOSE" -eq 1 ] || [ "$UNRARALL_BIN" = "echo" ] ; then
-      ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) "$filename"
+      ${UNRARALL_BIN} ${UNRAR_METHOD} $(getUnrarFlags ${UNRARALL_BIN}) "$filename" "${OUTPUT_DIR}"
     else
-      ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) "$filename" >/dev/null
+      ${UNRARALL_BIN} ${UNRAR_METHOD} $(getUnrarFlags ${UNRARALL_BIN}) "$filename" "${OUTPUT_DIR}" >/dev/null
     fi
     SUCCESS=$?
   fi

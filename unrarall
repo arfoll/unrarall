@@ -51,6 +51,7 @@ Use --clean= if you want to cleanup (delete files/folders). Otherwise no cleanin
 
 OPTIONS
 
+-o, --output     Use output dir instead of current dir to extract files in
 -7, --7zip       Force using 7zip instead of trying to automatically find a program to extract the rar files.
 -d, --dry        Dry run of unrar and cleaning. No action will actually be performed.
 -s, --disable-cksfv      Use cksfv (if present) to check the CRC of the downloaded files (if present) before extracting

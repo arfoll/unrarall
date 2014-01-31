@@ -27,6 +27,7 @@ declare -ix VERBOSE=0
 declare -ix QUIET=0
 declare -ix CKSFV=1
 declare -x UNRAR_METHOD="e"
+declare -x OUTPUT_DIR=""
 declare -x CKSFV_FLAGS="-q -g"
 declare -x UNRARALL_BIN="" #Leave empty to let unrarall to loop through UNRAR_BINARIES, setting this will disable searching through UNRAR_BINARIES
 declare -x UNRAR_BINARIES=(unrar 7z) #Array of binaries to try and use, the order here is the order of precedence
@@ -170,7 +171,7 @@ function find-regex-escape()
 # unrarall-remove-file <FILE> <HOOKNAME>
 function unrarall-remove-file-or-folder()
 {
-      if [ -f "./${1}" -o -d "./${1}" ]; then
+      if [ -f "${OUTPUT_DIR}/${1}" -o -d "${OUTPUT_DIR}/${1}" ]; then
         [ "$VERBOSE" -eq 1 ] && message nnl "Hook ${2}: Found ${1} . Attempting to remove..."
         ${RM} -rf $( [ "$VERBOSE" -eq 1 ] && echo '--verbose') "./${1}"
         [ $? -ne 0 ] && message error "Could not remove ${1}" || message ok "Success"
@@ -180,7 +181,7 @@ function unrarall-remove-file-or-folder()
 }
 
 #Start of clean-up hooks
-# unrarall-clean-{out,in}* <MODE> <SFILENAME>
+# unrarall-clean-(out|in)-* <MODE> <SFILENAME>
 # <MODE> is either help or clean
 # <SFILENAME> is the name of the rar file but with rar suffix removed
 # Hooks should use ${RM} instead of the 'rm' command
@@ -262,7 +263,7 @@ function unrarall-clean-out-covers_folders()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing all Covers/ folders"
-      find . -type d -iname 'covers' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find "${OUTPUT_DIR}" -type d -iname 'covers' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute covers_folders hook"
@@ -278,7 +279,7 @@ function unrarall-clean-out-sample_folders()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing all Sample/ folders"
-      find . -type d -iname 'sample' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find "${OUTPUT_DIR}" -type d -iname 'sample' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute sample_folders hook"
@@ -294,7 +295,7 @@ function unrarall-clean-out-sample_videos()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing video files with \"sample\" prefix"
-      find . -type f -iregex '^\./sample.*'"$(find-regex-escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find "${OUTPUT_DIR}" -type f -iregex '^\./sample.*'"$(find-regex-escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute sample_videos hook"

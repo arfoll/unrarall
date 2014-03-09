@@ -30,6 +30,7 @@ declare -x UNRAR_METHOD="e"
 declare -x CKSFV_FLAGS="-q -g"
 declare -x UNRARALL_BIN="" #Leave empty to let unrarall to loop through UNRAR_BINARIES, setting this will disable searching through UNRAR_BINARIES
 declare -x UNRAR_BINARIES=(unrar 7z) #Array of binaries to try and use, the order here is the order of precedence
+declare -x FIND_BINARIES=(findutils-find find)
 declare -x UNRARALL_PID="$$"
 declare -x UNRARALL_EXECUTABLE_NAME=$(basename $0;)
 declare -ax UNRARALL_DETECTED_CLEAN_UP_HOOKS
@@ -37,7 +38,7 @@ declare -ax UNRARALL_CLEAN_UP_HOOKS_TO_RUN=(none)
 
 function usage()
 {
-  echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean=<hook>[,<hook>] ] [ --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv] <DIRECTORY>
+  echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean=<hook>[,<hook>] ] [ --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv] [ --find-binary ] <DIRECTORY>
          ${UNRARALL_EXECUTABLE_NAME} --help
          ${UNRARALL_EXECUTABLE_NAME} --version
 
@@ -57,6 +58,7 @@ OPTIONS
 --clean=         Clean if unrar extraction succeeds (use --force to override). The clean up hooks specified determine what files/folders are removed. By default this is 'none'. Hooks are executed in order specified.
 -f, --force      Force unrar even if sfv check failed and if --clean will clean even if unrar fails.
 --full-path      Extract full path inside rar files instead of just extracting the files in the rar file which is the default behaviour.
+--find-binary    Specifies path to findutils \"find\" utility.
 -h, --help       Displays this help message and exits.
 -v, --verbose    Show extraction progress as ${UNRARALL_EXECUTABLE_NAME} executes. This is not done by default
 -q, --quiet      Be completely quiet. No output will be written to the screen
@@ -206,7 +208,7 @@ function unrarall-clean-rar()
     clean)
       [ $VERBOSE -eq 1 ] && message info "Deleting ${2} rar files..."
       #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
-      find . -maxdepth 1 -type f -iregex '\./'"$(find-regex-escape "$2")"'\.\(sfv\|[0-9]+\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      ${FIND_BIN} . -maxdepth 1 -type f -iregex '\./'"$(find-regex-escape "$2")"'\.\(sfv\|[0-9]+\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute clean-rar hook"
@@ -252,7 +254,7 @@ function unrarall-clean-covers_folders()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing all Covers/ folders"
-      find . -type d -iname 'covers' -depth -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      ${FIND_BIN} . -type d -iname 'covers' -depth -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute covers_folders hook"
@@ -268,7 +270,7 @@ function unrarall-clean-sample_folders()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing all Sample/ folders"
-      find . -type d -iname 'sample' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      ${FIND_BIN} . -type d -iname 'sample' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute sample_folders hook"
@@ -284,7 +286,7 @@ function unrarall-clean-sample_videos()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing video files with \"sample\" prefix"
-      find . -type f -iregex '^\./sample.*'"$(find-regex-escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      ${FIND_BIN} . -type f -iregex '^\./sample.*'"$(find-regex-escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute sample_videos hook"
@@ -347,6 +349,9 @@ while [ -n "$1" ]; do
         if [ "$UNRARALL_BIN" != 'echo' ]; then
           UNRARALL_BIN=7z
         fi
+        ;;
+      --find-binary )
+        FIND_BIN="x"
         ;;
       *)
         # user issued unrecognised option
@@ -424,6 +429,37 @@ fi
 #Inform the user about the binary chosen
 [ $VERBOSE -eq 1 ] && message info "Using \"${UNRARALL_BIN}\" to extract rar files" ;
 
+#If No user specified binary, cycle through array and try and find a binary that can be used
+if [ -z "${FIND_BIN}" ]; then
+	for (( index=0; index < ${#FIND_BINARIES[@]}; index++)); do
+	  #Check for binary
+	  [ $VERBOSE -eq 1 ] && message nnl "Looking for ${FIND_BINARIES[$index]}..."
+	  if type -P ${FIND_BINARIES[$index]} 2>&1 > /dev/null ; then
+	    #Binary found
+	    FIND_BIN="${FIND_BINARIES[$index]}"
+	    [ $VERBOSE -eq 1 ] && message ok "found"
+	    break;
+	  else
+	    [ $VERBOSE -eq 1 ] && message error "not found"
+	  fi
+
+	  #check if end of list
+	  if [ $index -eq $(( ${#FIND_BINARIES[@]} -1)) ]; then
+	    message error "Failed to find \"find\” binary. The following binaries were looked for ${FIND_BINARIES[*]}"
+	    exit 1;
+	  fi
+	done
+else
+  #check the manually specified binary exists
+  if ! type -P ${FIND_BIN} 2>&1 > /dev/null ; then
+    message error "The manually specified binary ${FIND_BIN} cannot be found"
+    exit 1;
+  fi
+fi
+
+#Inform the user about the binary chosen
+[ $VERBOSE -eq 1 ] && message info "Using \"${FIND_BIN}\" to find files" ;
+
 # Check $DIR exists and is a directory
 if [ -d "$DIR" ]; then
   message normal "Working over directory \"${DIR}\""
@@ -450,7 +486,7 @@ if [ "$CKSFV" -eq 1 ]; then
 fi
 
 # assuming only the .rar files are of interest
-for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
+for file in $(${FIND_BIN} "$DIR" -iregex '.*\.\(rar\|001\)$'); do
 
   filename=`basename "${file}"`
   # Strip extension off filename

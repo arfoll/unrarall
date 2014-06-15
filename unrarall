@@ -143,6 +143,33 @@ function getUnrarFlags()
   esac
 }
 
+#function to check if file is password protected
+function isRarEncrypted()
+{
+  case "$1" in
+    unrar)
+      unrar l "$2" | grep -q -E "^\*"
+      RETCODE=$?
+    ;;
+    7z)
+      7z l -slt "$2" | grep -q -E "^Encrypted = \+$"
+      RETCODE=$?
+    ;;
+    *)
+      #This code should only be reached if the programmer has made an error
+      message error "Failed to check encryption using unsupported program \"$1\""
+      #We will probably be called in a sub shell but we need to kill the parent shell
+      kill -9 ${UNRARALL_PID}
+      exit 1;
+    ;;
+  esac
+  if [ "$RETCODE" -eq 0 ]; then
+    echo "1"
+  else
+    echo "0"
+  fi
+}
+
 function detect-clean-up-hooks()
 {
   [ $VERBOSE -eq 1 ] && message info "Detecting clean up hooks..."
@@ -499,33 +526,39 @@ for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
   # unrar file if SFV checked out or --force was given
   if [ "$SUCCESS" -eq 0 ] || [ "$FORCE" -eq 1 ]; then
     message nnl "Extracting (${UNRAR_METHOD}) \"$file\"..."
-    # Try extracting without a password
-    if [ "$VERBOSE" -eq 1 ] || [ "$UNRARALL_BIN" = "echo" ] ; then
-      ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- "$filename"
+    file_encrypted=$(isRarEncrypted ${UNRARALL_BIN} ${filename})
+    if [ "${file_encrypted}" -eq 0 ]; then
+      # The file is not encrypted. We're extracting without a password
+      if [ "$VERBOSE" -eq 1 ] || [ "$UNRARALL_BIN" = "echo" ] ; then
+        ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- "$filename"
+      else
+        ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- "$filename" >/dev/null
+      fi
+      SUCCESS=$?
     else
-      ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- "$filename" >/dev/null
-    fi
-    SUCCESS=$?
-    # If extracting without a password failed and we have a password file, then use it
-    if [ "$SUCCESS" -eq 3 ] && [ -s "$UNRARALL_PASSWORD_FILE" ] ; then
-        [ $VERBOSE -eq 1 ] && message info "Trying passwords from password file \"${UNRARALL_PASSWORD_FILE}\"..."
+      # The file is encrypted. if we have a password file, then use it
+      if [ -s "${UNRARALL_PASSWORD_FILE}" ] ; then
+        [ $VERBOSE -eq 1 ] && message info "This archive is encrypted. Trying passwords from password file \"${UNRARALL_PASSWORD_FILE}\"..."
         while true; do read password || break
-            if [ "$VERBOSE" -eq 1 ] || [ "$UNRARALL_BIN" = "echo" ] ; then
-              ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p"$password" "$filename"
-            else
-              ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p"$password" "$filename" >/dev/null
-            fi
-            SUCCESS=$?
-	    if [ "$SUCCESS" -eq 0 ] ; then
-                [ $VERBOSE -eq 1 ] && message ok "Correct password is: \"${password}\""
-                break
-            else
-                [ $VERBOSE -eq 1 ] && message error "Tried wrong password: \"${password}\""
-            fi
-	done < "$UNRARALL_PASSWORD_FILE"
-     fi
+          if [ "$VERBOSE" -eq 1 ] || [ "$UNRARALL_BIN" = "echo" ] ; then
+            ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p"$password" "$filename"
+          else
+            ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p"$password" "$filename" >/dev/null
+          fi
+          SUCCESS=$?
+          if [ "$SUCCESS" -eq 0 ] ; then
+            [ $VERBOSE -eq 1 ] && message ok "Extraction succeeded using password: \"${password}\""
+            break
+          else
+            [ $VERBOSE -eq 1 ] && message error "Extraction failed using password: \"${password}\""
+          fi
+        done < "$UNRARALL_PASSWORD_FILE"
+      else
+        message error "Archive \"$file\" is encrypted. Please put the password in \"${UNRARALL_PASSWORD_FILE}\" to extract it."
+        SUCCESS=1
+      fi
+    fi
   fi
-
   # if fail remove from count
   if [ "$SUCCESS" -eq 0 ] && [ "$FORCE" -eq 0 ] ; then
     message ok "ok";

@@ -137,7 +137,7 @@ function getUnrarFlags()
       #This code should only be reached if the programmer has made an error
       message error "Failed to determine flags for unsupported program \"$1\""
       #We will probably be called in a sub shell but we need to kill the parent shell
-      kill -9 ${UNRARALL_PID}
+      kill -TERM ${UNRARALL_PID}
       exit 1;
     ;;
   esac
@@ -159,7 +159,7 @@ function isRarEncrypted()
       #This code should only be reached if the programmer has made an error
       message error "Failed to check encryption using unsupported program \"$1\""
       #We will probably be called in a sub shell but we need to kill the parent shell
-      kill -9 ${UNRARALL_PID}
+      kill -TERM ${UNRARALL_PID}
       exit 1;
     ;;
   esac

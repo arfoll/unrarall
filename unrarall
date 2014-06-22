@@ -148,12 +148,38 @@ function isRarEncrypted()
 {
   case "$1" in
     unrar)
-      unrar l "$2" | grep -q -E "^\*"
-      RETCODE=$?
+      rar_listing=$(unrar l -p- "$2")
+      echo "${rar_listing}" | grep -q -E "^\*"
+      if [ "$?" -eq 0 ] ; then
+        # RAR file contains encrypted files
+        echo 1
+      else
+        echo "${rar_listing}" | grep -q -E "^Details: .+ encrypted headers"
+        if [ "$?" -eq 0 ] ; then
+          # RAR file is encrypted (even the file listing)
+          echo 1
+        else
+          # RAR file is not encrypted
+          echo 0
+        fi
+      fi
     ;;
     7z)
-      7z l -slt "$2" | grep -q -E "^Encrypted = \+$"
-      RETCODE=$?
+      rar_listing=$(7z l -slt -p- "$2")
+      echo "${rar_listing}" | grep -q -E "^Encrypted = \+$"
+      if [ "$?" -eq 0 ] ; then
+        # RAR file contains encrypted files
+        echo 1
+      else
+        echo "${rar_listing}" | grep -q -E "^Error: .+: Can not open encrypted archive\. Wrong password\?$"
+        if [ "$?" -eq 0 ] ; then
+          # RAR file is encrypted (even the file listing)
+          echo 1
+        else
+          # RAR file is not encrypted
+          echo 0
+        fi
+      fi
     ;;
     *)
       #This code should only be reached if the programmer has made an error
@@ -163,11 +189,6 @@ function isRarEncrypted()
       exit 1;
     ;;
   esac
-  if [ "$RETCODE" -eq 0 ]; then
-    echo "1"
-  else
-    echo "0"
-  fi
 }
 
 function detect-clean-up-hooks()

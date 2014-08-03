@@ -21,7 +21,7 @@
 # Set some defaults
 declare -x DIR=""
 declare -x RM="rm"
-declare -rx UNRARALL_VERSION="0.4.1"
+declare -rx UNRARALL_VERSION="0.4.2"
 declare -ix FORCE=0
 declare -ix VERBOSE=0
 declare -ix QUIET=0

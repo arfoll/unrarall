@@ -181,6 +181,9 @@ function isRarEncrypted()
         fi
       fi
     ;;
+    echo)
+        echo 0
+    ;;
     *)
       #This code should only be reached if the programmer has made an error
       message error "Failed to check encryption using unsupported program \"$1\""

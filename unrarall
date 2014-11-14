@@ -375,6 +375,26 @@ function unrarall-clean-sample_videos()
   esac
 }
 
+function unrarall-clean-empty_folders()
+{
+  case "$1" in
+    help)
+        echo "Removes empty folders in the folder containing the found rar file(s)"
+    ;;
+    clean)
+      [ "$VERBOSE" -eq 1 ] && message info "Removing video files with \"sample\" prefix"
+      if [ ! -d "${3}" ]; then
+        message error "RARFILE_DIR (${3}) is not a directory"
+        return
+      fi
+      find "${3}" -depth -mindepth 1 -type d -empty -exec rmdir $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+    ;;
+    *)
+      message error "Could not execute empty_folders hook"
+    ;;
+  esac
+}
+
 #end of clean-up hooks
 
 
@@ -547,7 +567,7 @@ if [ "$CKSFV" -eq 1 ]; then
 fi
 
 # assuming only the .rar files are of interest
-for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
+for file in $(find "$DIR" -depth -iregex '.*\.\(rar\|001\)$'); do
 
   filename=`basename "${file}"`
   # Strip extension off filename

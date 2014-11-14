@@ -35,6 +35,7 @@ declare -x UNRARALL_EXECUTABLE_NAME=$(basename $0;)
 declare -x UNRARALL_PASSWORD_FILE="${HOME}/.unrar_passwords" #If this exists and unrar asks for a password
 declare -ax UNRARALL_DETECTED_CLEAN_UP_HOOKS
 declare -ax UNRARALL_CLEAN_UP_HOOKS_TO_RUN=(none)
+declare -x UNRARALL_OUTPUT_DIR=""
 
 function usage()
 {
@@ -61,6 +62,7 @@ OPTIONS
 -h, --help       Displays this help message and exits.
 -v, --verbose    Show extraction progress as ${UNRARALL_EXECUTABLE_NAME} executes. This is not done by default
 -q, --quiet      Be completely quiet. No output will be written to the screen
+-o, --output     Specify a directory to extract rar files. By default files will be extracted in the directory containing the rar file.
 --version        Give version information version.
 "
 
@@ -227,11 +229,14 @@ function unrarall-remove-file-or-folder()
 }
 
 #Start of clean-up hooks
-# unrarall-clean-* <MODE> <SFILENAME>
+# unrarall-clean-* <MODE> <SFILENAME> <RARFILE_DIR>
 # <MODE> is either help or clean
 # <SFILENAME> is the name of the rar file but with rar suffix removed
+# <RARFILE_DIR> is the directory containing the rar files
 # Hooks should use ${RM} instead of the 'rm' command
 # Hooks cannot be named "all" or "none" as these are reserved.
+# Hooks can assume that the current working directory is the directory where files
+# extracted. This is not necessarily the same as <RARFILE_DIR> is --output was specified
 
 function unrarall-clean-nfo()
 {
@@ -256,9 +261,16 @@ function unrarall-clean-rar()
       echo "Removes rar files and sfv files"
     ;;
     clean)
-      [ $VERBOSE -eq 1 ] && message info "Deleting ${2} rar files..."
+      # Strip out trailing slash if there is one. If we leave it there it'll break the regex passed to find
+      _RARFILE_DIR="${3%/}"
+      [ $VERBOSE -eq 1 ] && message info "Deleting ${2} rar files (in \"${_RARFILE_DIR}\")..."
+      if [ ! -d "${_RARFILE_DIR}" ]; then
+        message error "RARFILE_DIR (${_RARFILE_DIR}) is not a directory"
+        return
+      fi
+
       #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
-      find . -maxdepth 1 -type f -iregex '\./'"$(find-regex-escape "$2")"'\.\(sfv\|[0-9]+\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find "${_RARFILE_DIR}" -maxdepth 1 -type f -iregex "${_RARFILE_DIR}/$(find-regex-escape "$2")"'\.\(sfv\|[0-9]+\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute clean-rar hook"
@@ -400,6 +412,20 @@ while [ -n "$1" ]; do
           UNRARALL_BIN=7z
         fi
         ;;
+      -o | --output)
+        shift
+        UNRARALL_OUTPUT_DIR="$1"
+        if [ ! -d "${UNRARALL_OUTPUT_DIR}" ]; then
+          message error "\"${UNRARALL_OUTPUT_DIR}\" is not a directory"
+          exit 1
+        else
+          message info "Using \"${UNRARALL_OUTPUT_DIR}\" as output directory"
+        fi
+
+        # Make the directory absolute. This is necessary
+        # because we may be changing directory multiple times
+        UNRARALL_OUTPUT_DIR="$(cd "${UNRARALL_OUTPUT_DIR}" ; pwd)"
+        ;;
       *)
         # user issued unrecognised option
         message error "Unrecognised option: $1"
@@ -535,6 +561,7 @@ for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
 
   # move to directory
   cd "$dirname"
+  RARFILE_DIR="$(pwd)"
 
   SUCCESS=0
   if [ "$CKSFV" -eq 1 ]; then
@@ -547,16 +574,28 @@ for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
     fi
   fi
 
+  # Compute fullpath to rar file
+  filenameAbsolute="$(pwd)/${filename}"
+
+  # If user specified extraction directory change to it now
+  if [ -n "${UNRARALL_OUTPUT_DIR}" ]; then
+    cd "${UNRARALL_OUTPUT_DIR}"
+    if [ $? -ne 0 ]; then
+      message error "Failed to switch to output directory \"${UNRARALL_OUTPUT_DIR}\""
+      exit 1
+    fi
+  fi
+
   # unrar file if SFV checked out or --force was given
   if [ "$SUCCESS" -eq 0 ] || [ "$FORCE" -eq 1 ]; then
     message nnl "Extracting (${UNRAR_METHOD}) \"$file\"..."
-    file_encrypted=$(isRarEncrypted ${UNRARALL_BIN} ${filename})
+    file_encrypted=$(isRarEncrypted ${UNRARALL_BIN} ${filenameAbsolute})
     if [ "${file_encrypted}" -eq 0 ]; then
       # The file is not encrypted. We're extracting without a password
       if [ "$VERBOSE" -eq 1 ] || [ "$UNRARALL_BIN" = "echo" ] ; then
-        ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- "$filename"
+        ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- "$filenameAbsolute"
       else
-        ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- "$filename" >/dev/null
+        ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- "$filenameAbsolute" >/dev/null
       fi
       SUCCESS=$?
     else
@@ -565,9 +604,9 @@ for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
         [ $VERBOSE -eq 1 ] && message info "This archive is encrypted. Trying passwords from password file \"${UNRARALL_PASSWORD_FILE}\"..."
         while true; do read password || break
           if [ "$VERBOSE" -eq 1 ] || [ "$UNRARALL_BIN" = "echo" ] ; then
-            ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p"$password" "$filename"
+            ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p"$password" "$filenameAbsolute"
           else
-            ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p"$password" "$filename" >/dev/null
+            ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p"$password" "$filenameAbsolute" >/dev/null
           fi
           SUCCESS=$?
           if [ "$SUCCESS" -eq 0 ] ; then
@@ -601,13 +640,13 @@ for file in $(find "$DIR" -iregex '.*\.\(rar\|001\)$'); do
         #Run every clean up hook
         for hook in ${UNRARALL_DETECTED_CLEAN_UP_HOOKS[*]} ; do
           message nnl "$hook "
-          ( unrarall-clean-$hook clean $sfilename )
+          ( unrarall-clean-$hook clean $sfilename "${RARFILE_DIR}" )
         done
       else
         #Run selected clean up hooks
         for hook in ${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[*]} ; do
           message nnl "$hook "
-          ( unrarall-clean-$hook clean $sfilename )
+          ( unrarall-clean-$hook clean $sfilename "${RARFILE_DIR}")
         done
       fi
       message ok "Finished running hooks"

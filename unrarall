@@ -379,10 +379,10 @@ function unrarall-clean-empty_folders()
 {
   case "$1" in
     help)
-        echo "Removes empty folders in the folder containing the found rar file(s)"
+      echo "Removes empty folders in the folder containing the found rar file(s)"
     ;;
     clean)
-      [ "$VERBOSE" -eq 1 ] && message info "Removing video files with \"sample\" prefix"
+      [ "$VERBOSE" -eq 1 ] && message info "Removing empty folders"
       if [ ! -d "${3}" ]; then
         message error "RARFILE_DIR (${3}) is not a directory"
         return

@@ -375,7 +375,9 @@ function unrarall-clean-sample_videos()
   esac
 }
 
-function unrarall-clean-empty_folders()
+# HACK: z_ prefix is to force this hook to run last in
+# --clean=all
+function unrarall-clean-z_empty_folders()
 {
   case "$1" in
     help)
@@ -390,7 +392,7 @@ function unrarall-clean-empty_folders()
       find "${3}" -depth -mindepth 1 -type d -empty -exec rmdir $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
-      message error "Could not execute empty_folders hook"
+      message error "Could not execute z_empty_folders hook"
     ;;
   esac
 }

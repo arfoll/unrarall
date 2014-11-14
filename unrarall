@@ -39,31 +39,50 @@ declare -x UNRARALL_OUTPUT_DIR=""
 
 function usage()
 {
-  echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean=<hook>[,<hook>] ] [ --force ] [ --full-path ] [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv] [ --output DIRECTORY ] <DIRECTORY>
-         ${UNRARALL_EXECUTABLE_NAME} --help
-         ${UNRARALL_EXECUTABLE_NAME} --version
+  echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean=<hook>[,<hook>] ] [ --force ] [ --full-path ]
+                [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv]
+                [ --output DIRECTORY ] <DIRECTORY>
+       ${UNRARALL_EXECUTABLE_NAME} --help
+       ${UNRARALL_EXECUTABLE_NAME} --version
 
-  Usage (short options):
-         ${UNRARALL_EXECUTABLE_NAME}  [-f] [ -v | -q ] [-7] [-d] [-o DIRECTORY ] [-s] <DIRECTORY>
-         ${UNRARALL_EXECUTABLE_NAME} -h
+Usage (short options):
+     ${UNRARALL_EXECUTABLE_NAME}  [-f] [ -v | -q ] [-7] [-d] [-o DIRECTORY ] [-s] <DIRECTORY>
+     ${UNRARALL_EXECUTABLE_NAME} -h
+
 DESCRIPTON
-${UNRARALL_EXECUTABLE_NAME} is a utility to unrar and clean up various files (.e.g. rar files). Sub-directories are automatically recursed and if a rar file exists in a sub-directory then the rar file is extracted into that subdirectory.
+${UNRARALL_EXECUTABLE_NAME} is a utility to unrar and clean up various files
+(.e.g. rar files). Sub-directories are automatically recursed and if a rar file
+exists in a sub-directory then the rar file is extracted into that subdirectory.
 
-Use --clean= if you want to cleanup (delete files/folders). Otherwise no cleaning is done. It can also be used to delete rar files that have already been used for extraction with \"--clean=rar --force\". Use with caution!
+Use --clean= if you want to cleanup (delete files/folders). Otherwise no
+cleaning is done. It can also be used to delete rar files that have already been
+used for extraction with \"--clean=rar --force\". Use with caution!
 
 OPTIONS
 
--7, --7zip       Force using 7zip instead of trying to automatically find a program to extract the rar files.
--d, --dry        Dry run of unrar and cleaning. No action will actually be performed.
--s, --disable-cksfv      Use cksfv (if present) to check the CRC of the downloaded files (if present) before extracting
---clean=         Clean if unrar extraction succeeds (use --force to override). The clean up hooks specified determine what files/folders are removed. By default this is 'none'. Hooks are executed in order specified.
--f, --force      Force unrar even if sfv check failed and if --clean will clean even if unrar fails.
---full-path      Extract full path inside rar files instead of just extracting the files in the rar file which is the default behaviour.
--h, --help       Displays this help message and exits.
--v, --verbose    Show extraction progress as ${UNRARALL_EXECUTABLE_NAME} executes. This is not done by default
--q, --quiet      Be completely quiet. No output will be written to the screen
--o, --output     Specify a directory to extract rar files. By default files will be extracted in the directory containing the rar file.
---version        Give version information version.
+-7, --7zip           Force using 7zip instead of trying to automatically find a
+                     program to extract the rar files.
+-d, --dry            Dry run of unrar and cleaning. No action will actually be
+                     performed.
+-s, --disable-cksfv  Use cksfv (if present) to check the CRC of the downloaded
+                     files (if present) before extracting
+--clean=             Clean if unrar extraction succeeds (use --force to override).
+                     The clean up hooks specified determine what files/folders
+                     are removed. By default this is 'none'. Hooks are executed
+                     in order specified.
+-f, --force          Force unrar even if sfv check failed and if --clean will
+                     clean even if unrar fails.
+--full-path          Extract full path inside rar files instead of just
+                     extracting the files in the rar file which is the default
+                     behaviour.
+-h, --help           Displays this help message and exits.
+-v, --verbose        Show extraction progress as ${UNRARALL_EXECUTABLE_NAME}
+                     executes. This is not done by default
+-q, --quiet          Be completely quiet. No output will be written to the
+                     screen
+-o, --output         Specify a directory to extract rar files. By default files
+                     will be extracted in the directory containing the rar file.
+--version            Give version information version.
 "
 
 #List the detected clean up hooks with their help information

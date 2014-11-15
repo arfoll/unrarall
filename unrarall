@@ -220,11 +220,23 @@ function detect-clean-up-hooks()
   [ $VERBOSE -eq 1 ] && message info "Detecting clean up hooks..."
   HOOKS=$(declare -F | grep -Eo ' unrarall-clean-[_a-z-]+')
   index=0
+  EMPTY_FOLDER=0
   for hook in $HOOKS ;do
     [ $VERBOSE -eq 1 ] && message info "Found $hook";
+
+    if [ "$hook" == "unrarall-clean-empty_folders" ]; then
+        # it is executed last for --clean=all
+        EMPTY_FOLDER=1
+        continue
+    fi
+
     UNRARALL_DETECTED_CLEAN_UP_HOOKS[$index]=$( echo "$hook" | sed 's/unrarall-clean-//')
     ((index++))
   done
+
+  if [ ${EMPTY_FOLDER} -eq 1 ]; then
+    UNRARALL_DETECTED_CLEAN_UP_HOOKS[$index]="empty_folders"
+  fi
 }
 
 #Prints out an escaped version of 1st argument for use in find's regex

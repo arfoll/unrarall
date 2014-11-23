@@ -130,10 +130,10 @@ function message()
       nnl)
         #use echo -n to avoid new line
         echo -n "$2"
-        ;;
+      ;;
       info)
         echo "$2"
-        ;;
+      ;;
       *)
         echo "$2"
     esac
@@ -423,18 +423,18 @@ while [ -n "$1" ]; do
       -h | --help )
         usage
         exit 0
-        ;;
+      ;;
       --version )
         echo "$UNRARALL_VERSION"
         exit 0
-        ;;
+      ;;
       -d | --dry )
         UNRARALL_BIN=echo
         RM="echo"
-        ;;
+      ;;
       -s | --disable-cksfv )
         CKSFV=0
-        ;;
+      ;;
       --clean=*)
         index=0;
         for hook in $( echo "$1" | sed 's/--clean=//' | tr , " ") ; do
@@ -442,27 +442,27 @@ while [ -n "$1" ]; do
           ((index++))
         done
         [ $index -eq 0 ] && { message error "Clean up hooks must be specified when using --clean="; exit 1; }
-        ;;
+      ;;
       -f | --force )
         FORCE=1
-        ;;
+      ;;
       -v | --verbose )
         VERBOSE=1
         CKSFV_FLAGS="-g"
-        ;;
+      ;;
       -q | --quiet )
         VERBOSE=0
         QUIET=1
-        ;;
+      ;;
       --full-path )
         UNRAR_METHOD="x"
-        ;;
+      ;;
       -7 | --7zip)
         # to ensure that if --dry and then --7zip are used then we still do a dry run
         if [ "$UNRARALL_BIN" != 'echo' ]; then
           UNRARALL_BIN=7z
         fi
-        ;;
+      ;;
       -o | --output)
         shift
         UNRARALL_OUTPUT_DIR="$1"
@@ -476,13 +476,13 @@ while [ -n "$1" ]; do
         # Make the directory absolute. This is necessary
         # because we may be changing directory multiple times
         UNRARALL_OUTPUT_DIR="$(cd "${UNRARALL_OUTPUT_DIR}" ; pwd)"
-        ;;
+      ;;
       *)
         # user issued unrecognised option
         message error "Unrecognised option: $1"
         usage
         exit 1
-        ;;
+      ;;
     esac
   else
     #Handle mandatory argument

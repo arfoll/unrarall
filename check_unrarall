@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+
+#test_unrarall
+# Copyright (C) 2014 Brendan Le Foll <brendan@fridu.net>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+##########################################################################
+
+# This is a test script. Nothing should fail.
+set -e
+
+declare -rx TMPDIR="/tmp/unrarall"
+
+#function to display pretty messages
+function message()
+{
+  #Assume $1 is message type & $2 is message
+  #See http://www.frexx.de/xterm-256-notes/ for information on xterm colour codes
+  case "$1" in
+    error)
+      #use escape sequence to show red text
+      echo -e "\033[31m${2}\033[0m" 1>&2
+    ;;
+    ok)
+      #use escape sequence to show green text
+      echo -e "\033[32m${2}\033[0m"
+    ;;
+    nnl)
+      #use echo -n to avoid new line
+      echo -n "$2"
+    ;;
+    info)
+      echo "$2"
+    ;;
+    *)
+      echo "$2"
+  esac
+}
+
+# Let's check the sanity of the system we're on
+if [[ $BASH_VERSINFO < 4 ]]; then
+  message info "We're on an old bash version, you'll want to upgrade!"
+fi
+# Check we have a working rar
+if ! type -P rar 2>&1 > /dev/null ; then
+  message error "rar wasn't found. Can't go any further!"
+  exit 1
+fi
+
+ARCHIVE="testarchive"
+ARCHIVEDIR="${TMPDIR}/${ARCHIVE}"
+message info "Wiping ${TMPDIR}"
+rm -r ${TMPDIR}
+message ok "Creating some test files in ${TMPDIR}"
+mkdir -p ${ARCHIVEDIR}
+if (( $? )); then
+  message error "Make sure you have space left in ${TMPDIR} and have permissions to write there!"
+  exit 1
+fi
+
+## LETS make some archives
+
+# make a 10MB file
+dd if=/dev/zero of=${ARCHIVEDIR}/monkey.bin bs=1024 count=$((10 * 1024))
+if (( $? )); then
+  message error "Failed to create a file with dd. Check permissions in ${TMPDIR}"
+  exit 1
+fi
+touch ${ARCHIVEDIR}/monkey.txt
+touch ${ARCHIVEDIR}/monkey.nfo
+touch ${ARCHIVEDIR}/${ARCHIVE}.nfo
+
+message info "making ${ARCHIVE} archive"
+# do this in a subshell because rar is a bit dumb
+(cd ${TMPDIR} && rar a -r ${ARCHIVE}.rar .)
+# check the result of our exec
+if (( $? )); then
+  message error "Failed to create a rar archive. Do you have 'rar' installed?"
+  exit 1
+fi
+# wipe ARCHIVEDIR to remove confusion
+rm -r ${ARCHIVEDIR}
+# backup our created archive
+cp ${ARCHIVEDIR}.rar /tmp
+
+function unrarall_reset_test()
+{
+  rm -r ${TMPDIR}
+  mkdir -p ${TMPDIR}
+  cp /tmp/${ARCHIVE}.rar ${TMPDIR}
+}
+
+##### Test 1
+message info "Test1: clean=none, clean=all"
+./unrarall --clean=none ${TMPDIR}
+if [ ! `ls ${TMPDIR} | wc -l` -eq 5 ]; then
+  message error "We didn't end up with the right number of files"
+  exit 1
+fi
+if [ ! -f ${ARCHIVEDIR}.rar ]; then
+  message error "We wiped our archive with --clean=none!!!!"
+  exit 1
+fi
+
+./unrarall --clean=all ${TMPDIR}
+if [ ! `ls ${TMPDIR} | wc -l` -eq 3 ]; then
+  message error "We didn't end up with the right number of files"
+  exit 1
+fi
+if [ -f ${ARCHIVEDIR}.rar ]; then
+  message error "We didn't wipe our archive with --clean=all"
+  exit 1
+fi
+
+##### Test 2
+message info "Test2: output dir with clean=none, clean=all"
+unrarall_reset_test
+mkdir -p /tmp/unraralloutputdir
+./unrarall --clean=none --output /tmp/unraralloutputdir ${TMPDIR}
+if [ ! `ls /tmp/unraralloutputdir | wc -l` -eq 4 ]; then
+  message error "We didn't end up with the right number of files"
+  exit 1
+fi
+if [ ! -f ${ARCHIVEDIR}.rar ]; then
+  message error "We wiped our archive with --clean=none!!!!"
+  exit 1
+fi
+
+./unrarall --clean=all --output /tmp/unraralloutputdir ${TMPDIR}
+if [ ! `ls /tmp/unraralloutputdir | wc -l` -eq 3 ]; then
+  message error "We didn't end up with the right number of files"
+  exit 1
+fi
+if [ -f ${ARCHIVEDIR}.rar ]; then
+  message error "We didn't wipe our archive with --clean=all"
+  exit 1
+fi
+rm -r /tmp/unraralloutputdir
+
+##### Test 3
+message info "Test3: output dir with clean=nfo"
+unrarall_reset_test
+mkdir -p /tmp/unraralloutputdir
+./unrarall --clean=nfo --output /tmp/unraralloutputdir ${TMPDIR}
+if [ ! `ls /tmp/unraralloutputdir | wc -l` -eq 3 ]; then
+  message error "We didn't end up with the right number of files"
+  exit 1
+fi
+if [ ! -f ${ARCHIVEDIR}.rar ]; then
+  message error "We wiped our archive with --clean=none!!!!"
+  exit 1
+fi
+if [ -f /tmp/unraralloutputdir/${ARCHIVE}.nfo ]; then
+  message error "We didn't find wipe the correct nfo file"
+  exit 1
+fi
+
+##### Test 4
+message info "Test4: check functionality with .001 suffix"
+unrarall_reset_test
+mv ${ARCHIVEDIR}.rar ${ARCHIVEDIR}.001
+./unrarall --clean=none ${TMPDIR}
+if [ ! `ls ${TMPDIR} | wc -l` -eq 5 ]; then
+  message error "We didn't end up with the right number of files"
+  exit 1
+fi
+if [ ! -f ${ARCHIVEDIR}.001 ]; then
+  message error "We wiped our archive with --clean=none!!!!"
+  exit 1
+fi
+
+./unrarall --clean=all ${TMPDIR}
+if [ ! `ls ${TMPDIR} | wc -l` -eq 3 ]; then
+  message error "We didn't end up with the right number of files"
+  exit 1
+fi
+if [ -f ${ARCHIVEDIR}.001 ]; then
+  message error "We didn't wipe our archive with --clean=all"
+  exit 1
+fi

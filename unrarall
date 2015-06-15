@@ -19,6 +19,7 @@
 ##########################################################################
 
 # Set some defaults
+declare -x FIND="find" #set to gfind to use homebrew's GNU findutils on OSX Yosemite
 declare -x DIR=""
 declare -x RM="rm"
 declare -rx UNRARALL_VERSION="0.4.3"
@@ -301,7 +302,7 @@ function unrarall-clean-rar()
       fi
 
       #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
-      find "${_RARFILE_DIR}" -maxdepth 1 -type f -iregex "${_RARFILE_DIR}/$(find-regex-escape "$2")"'\.\(sfv\|[0-9]+\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      ${FIND} "${_RARFILE_DIR}" -maxdepth 1 -type f -iregex "${_RARFILE_DIR}/$(find-regex-escape "$2")"'\.\(sfv\|[0-9]+\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute clean-rar hook"
@@ -347,7 +348,7 @@ function unrarall-clean-covers_folders()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing all Covers/ folders"
-      find . -depth -type d -iname 'covers' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      ${FIND} . -depth -type d -iname 'covers' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute covers_folders hook"
@@ -363,7 +364,7 @@ function unrarall-clean-sample_folders()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing all Sample/ folders"
-      find . -type d -iname 'sample' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      ${FIND} . -type d -iname 'sample' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute sample_folders hook"
@@ -379,7 +380,7 @@ function unrarall-clean-sample_videos()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing video files with \"sample\" prefix"
-      find . -type f -iregex '^\./sample.*'"$(find-regex-escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      ${FIND} . -type f -iregex '^\./sample.*'"$(find-regex-escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute sample_videos hook"
@@ -399,7 +400,7 @@ function unrarall-clean-empty_folders()
         message error "RARFILE_DIR (${3}) is not a directory"
         return
       fi
-      find "${3}" -depth -mindepth 1 -type d -empty -exec rmdir $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      ${FIND} "${3}" -depth -mindepth 1 -type d -empty -exec rmdir $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute empty_folders hook"
@@ -492,6 +493,10 @@ while [ -n "$1" ]; do
     shift
 done
 
+if [[ $OSTYPE == darwin* ]]; then 
+    type -P gfind &>/dev/null && FIND=gfind || message error "Please install fileutils using HomeBrew. (http://brew.sh/)"; exit 1;
+fi
+
 detect-clean-up-hooks
 
 #Verify selected clean-up hooks are ok
@@ -579,7 +584,7 @@ if [ "$CKSFV" -eq 1 ]; then
 fi
 
 # assuming only the .rar files are of interest
-for file in $(find "$DIR" -depth -iregex '.*\.\(rar\|001\)$'); do
+for file in $(${FIND} "$DIR" -depth -iregex '.*\.\(rar\|001\)$'); do
 
   filename=`basename "${file}"`
   # Strip extension off filename

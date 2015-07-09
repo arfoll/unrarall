@@ -26,3 +26,7 @@ Enjoy.
 Name and idea comes from "jeremy" see - http://askubuntu.com/questions/7059/script-app-to-unrar-files-and-only-delete-the-archives-which-were-sucessfully
 
 [![Analytics](https://ga-beacon.appspot.com/UA-11959363-2/arfoll/unrarall)](https://github.com/igrigorik/ga-beacon)
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/arfoll/unrarall/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+

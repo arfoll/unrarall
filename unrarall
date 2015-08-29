@@ -494,7 +494,7 @@ while [ -n "$1" ]; do
 done
 
 if [[ $OSTYPE == darwin* ]]; then 
-    type -P gfind &>/dev/null && FIND=gfind || message error "Please install fileutils using HomeBrew. (http://brew.sh/)"; exit 1;
+    type -P gfind &>/dev/null && FIND=gfind || { message error "Please install findutils using HomeBrew. (http://brew.sh/)"; exit 1; }
 fi
 
 detect-clean-up-hooks

@@ -69,8 +69,8 @@ OPTIONS
                      files (if present) before extracting
 --clean=             Clean if unrar extraction succeeds (use --force to override).
                      The clean up hooks specified determine what files/folders
-                     are removed. By default this is 'none'. Hooks are executed
-                     in order specified.
+                     are removed. By default this is 'none'. Hooks are separated
+                     by a comma and are executed in order specified.
 -f, --force          Force unrar even if sfv check failed and if --clean will
                      clean even if unrar fails.
 --full-path          Extract full path inside rar files instead of just

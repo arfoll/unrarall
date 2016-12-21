@@ -685,10 +685,8 @@ for file in $(${FIND} "$DIR" -depth -iregex '.*\.\(rar\|001\)$'); do
     if [ "${file_encrypted}" -eq 0 ]; then
       # The file is not encrypted. We're extracting without a password
       if [ "$VERBOSE" -eq 1 ] || [ "$UNRARALL_BIN" = "echo" ] ; then
-echo -e "\nx:no pwd: ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- $filenameAbsolute"
         ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- "$filenameAbsolute"
       else
-echo -e "\nx:no pwd2: ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- $filenameAbsolute >/dev/null"
         ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- "$filenameAbsolute" >/dev/null
       fi
       SUCCESS=$?
@@ -698,10 +696,8 @@ echo -e "\nx:no pwd2: ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARAL
         [ $VERBOSE -eq 1 ] && message info "This archive is encrypted. Trying passwords from password file \"${UNRARALL_PASSWORD_FILE}\"..."
         while true; do read password || break
           if [ "$VERBOSE" -eq 1 ] || [ "$UNRARALL_BIN" = "echo" ] ; then
-echo -e "\nx: PWD: ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p$password $filenameAbsolute"
             ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p"$password" "$filenameAbsolute"
           else
-echo -e "\nx: PWD2: ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p$password $filenameAbsolute >/dev/null"            
             ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p"$password" "$filenameAbsolute" >/dev/null
           fi
           SUCCESS=$?

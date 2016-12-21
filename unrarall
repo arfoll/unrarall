@@ -614,7 +614,7 @@ MATCHRARMIME='x-rar'
 
 if [ "$CKSFV" -eq 1 ]; then
   if ! type -P cksfv 2>&1 > /dev/null ; then
-    message info "Install cksfv in order to get CRC checked before using unrar"
+    message info "Install cksfv in order to get CRC checked before using ${UNRAR_BINARIES}"
     CKSFV=0
   fi
 fi

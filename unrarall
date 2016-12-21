@@ -190,13 +190,13 @@ function isRarEncrypted()
       fi
     ;;
     rar)
-      rar_listing=$(rar l -p- "$2")
+      rar_listing=$(rar l -p- "$2" 2>&1)
       echo "${rar_listing}" | grep -q -E "^\*"
       if [ "$?" -eq 0 ] ; then
         # RAR file contains encrypted files
         echo 1
       else
-        echo "${rar_listing}" | grep -q -E "^Details: .+ encrypted headers"
+        echo "${rar_listing}" | grep -q -E "encrypted file .* wrong password"
         if [ "$?" -eq 0 ] ; then
           # RAR file is encrypted (even the file listing)
           echo 1

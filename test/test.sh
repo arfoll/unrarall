@@ -13,3 +13,9 @@ echo "${PASSWORD}" > "${HOME}/.unrar_passwords"
 RESULT_DIR=results
 mkdir -p "${RESULT_DIR}"
 unrarall --clean=rar -o "${RESULT_DIR}" ./
+
+
+# Expectations.
+echo "============= Expectations ============="
+echo "- All RAR files are deleted from ./rar-data/"
+echo "- 3 files are in  ./results/"

@@ -1,0 +1,17 @@
+# RUN: %unrarall --help > %t.log 2>&1
+# RUN: %OutputCheck --file-to-check %t.log %s
+
+# FIXME: This ordering is fragile. OutputCheck needs
+# to be taught to allow arbitrary line orderings.
+# CHECK-L: CLEAN UP HOOKS
+# CHECK-NEXT-L: covers_folders
+# CHECK-NEXT-L: nfo
+# CHECK-NEXT-L: osx_junk
+# CHECK-NEXT-L: proof_folders
+# CHECK-NEXT-L: rar
+# CHECK-NEXT-L: sample_folders
+# CHECK-NEXT-L: sample_videos
+# CHECK-NEXT-L: windows_junk
+# CHECK-NEXT-L: empty_folders
+# CHECK-NEXT-L: all
+# CHECK-NEXT-L: none

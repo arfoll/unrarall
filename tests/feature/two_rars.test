@@ -1,0 +1,25 @@
+# REQUIRES: rar_binary
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# RUN: mkdir a
+# RUN: echo "Test file" > test_file
+# RUN: %rar a a/test.rar test_file
+# RUN: test -f a/test.rar
+# RUN: rm test_file
+
+# RUN: mkdir b
+# RUN: echo "Test file 2" > test_file_2
+# RUN: %rar a b/test.rar test_file_2
+# RUN: test -f b/test.rar
+# RUN: rm test_file_2
+
+# Check the test files are extracted to the correct location and the rar files
+# are removed.
+# RUN: %unrarall --clean=rar .
+# RUN: test -f a/test_file
+# RUN: test -f b/test_file_2
+# RUN: test ! -f a/test.rar
+# RUN: test ! -f b/test.rar

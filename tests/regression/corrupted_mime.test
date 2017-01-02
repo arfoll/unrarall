@@ -1,0 +1,29 @@
+# REQUIRES: rar_binary
+
+# FIXME: This test should pass but there's a bug in unrarall
+# which means the counter is not updated properly if the mime
+# data is detected as bad.
+# XFAIL: *
+
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a simple archive
+# RUN: echo "Test file" > test_file
+# RUN: %rar a test.rar
+# RUN: test -f test.rar
+# RUN: rm test_file
+
+# Corrupt the header
+# RUN: cat <(echo "bogus") <(cat test.rar) > broken.rar
+# RUN: mv broken.rar test.rar
+
+# RUN: mkdir -p OUTPUT_DIR
+# FIXME: unrarall's exit code should not be 0.
+# RUN: %unrarall --clean=none --full-path --output OUTPUT_DIR/ . > %t.log 2>&1
+# RUN: %OutputCheck --file-to-check %t.log %s
+
+# CHECK: Skipping file ".+" because it does not appear to be a valid rar file
+# CHECK: no rar files extracted

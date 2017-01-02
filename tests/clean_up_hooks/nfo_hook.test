@@ -1,0 +1,34 @@
+# REQUIRES: rar_binary
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a simple archive
+# RUN: echo "Test file" > test_file
+# RUN: echo "This is an nfo file" > test.nfo
+# RUN: %rar a test.rar test_file test.nfo
+# RUN: test -f test.rar
+# RUN: rm test_file test.nfo
+
+# Check that when extracting without cleaning the expected files are present
+# RUN: mkdir -p OUTPUT_DIR
+# RUN: %unrarall --clean=none --output OUTPUT_DIR/ .
+# RUN: test -f OUTPUT_DIR/test_file
+# RUN: test -f OUTPUT_DIR/test.nfo
+# RUN: test -f test.rar
+
+# Extract again but run the nfo hook
+# RUN: rm -rf OUTPUT_DIR
+# RUN: mkdir -p OUTPUT_DIR
+# RUN: %unrarall --clean=nfo --output OUTPUT_DIR/ .
+# RUN: test -f OUTPUT_DIR/test_file
+# RUN: test ! -f OUTPUT_DIR/test.nfo
+# RUN: test -f test.rar
+
+# Extract again but using --clean=all
+# RUN: rm -rf OUTPUT_DIR
+# RUN: mkdir -p OUTPUT_DIR
+# RUN: %unrarall --clean=all --output OUTPUT_DIR/ .
+# RUN: test -f OUTPUT_DIR/test_file
+# RUN: test ! -f OUTPUT_DIR/test.nfo

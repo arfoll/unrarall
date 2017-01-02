@@ -1,0 +1,46 @@
+# REQUIRES: rar_binary
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a simple archive
+# RUN: echo "Test file" > test_file
+# RUN: %rar a test.rar test_file
+# Make a fake sfv file so we don't need to depend on the cfv binary
+# RUN: touch test.sfv
+# RUN: test -f test.rar
+# RUN: test -f test.sfv
+# RUN: rm test_file
+
+# Check that when extracting without cleaning the expected files are present
+# RUN: mkdir -p OUTPUT_DIR
+# RUN: %unrarall --clean=none --disable-cksfv --output OUTPUT_DIR/ .
+# RUN: test -f OUTPUT_DIR/test_file
+# RUN: test -f test.sfv
+# RUN: test -f test.rar
+
+# Extract again but run the rar hook
+# RUN: rm -rf OUTPUT_DIR
+# RUN: mkdir -p OUTPUT_DIR
+# RUN: %unrarall --clean=rar --disable-cksfv --output OUTPUT_DIR/ .
+# RUN: test -f OUTPUT_DIR/test_file
+# RUN: test ! -f test.sfv
+# RUN: test ! -f test.rar
+
+# Make a simple archive
+# RUN: echo "Test file" > test_file
+# RUN: %rar a test.rar test_file
+# Make a fake sfv file so we don't need to depend on the cfv binary
+# RUN: touch test.sfv
+# RUN: test -f test.rar
+# RUN: test -f test.sfv
+# RUN: rm test_file
+
+# Extract again but using --clean=all
+# RUN: rm -rf OUTPUT_DIR
+# RUN: mkdir -p OUTPUT_DIR
+# RUN: %unrarall --clean=all --disable-cksfv --output OUTPUT_DIR/ .
+# RUN: test -f OUTPUT_DIR/test_file
+# RUN: test ! -f test.sfv
+# RUN: test ! -f test.rar

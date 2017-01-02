@@ -1,0 +1,25 @@
+# REQUIRES: rar_binary
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a simple test file.
+# RUN: dd if=/dev/zero of=`pwd`/data count=2 bs=1M
+# RUN: test -f data
+
+# Make the rar volumes.
+# NOTE: We use no compression here because the data is all zeros
+# which compresses really well and would result in no volumes being
+# produced.
+# RUN: %rar a -m0 -v512k test.rar data
+# RUN: test -f test.part*1.rar
+# RUN: test -f test.part*2.rar
+# RUN: test -f test.part*3.rar
+# RUN: test -f test.part*4.rar
+# RUN: rm -f data
+
+# Check the test file is extracted and rar files are removed
+# RUN: %unrarall --clean=rar .
+# RUN: test -f data
+# RUN: test "$(%find . -type f -iname '*.rar' | wc -l)" -eq 0

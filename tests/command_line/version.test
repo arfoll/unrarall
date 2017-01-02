@@ -1,0 +1,6 @@
+# Check that unrarall can report its version without error and that the output
+# matches the expected pattern.
+# RUN: %unrarall --version > %t.log 2>&1
+# RUN: %OutputCheck --file-to-check %t.log %s
+
+# CHECK: ^\d\.\d+\.\d+$

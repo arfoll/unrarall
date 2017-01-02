@@ -1,0 +1,39 @@
+# REQUIRES: rar_binary
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a simple archive
+# RUN: echo "Test file" > test_file
+# RUN: mkdir -p Proof
+# RUN: touch Proof/dummy
+# RUN: %rar a test.rar test_file Proof
+# RUN: test -f test.rar
+# RUN: rm test_file
+# RUN: rm -rf Covers
+
+# Check that when extracting without cleaning the expected files are present
+# RUN: mkdir -p OUTPUT_DIR
+# RUN: %unrarall --clean=none --full-path --output OUTPUT_DIR/ .
+# RUN: test -f OUTPUT_DIR/test_file
+# RUN: test -d OUTPUT_DIR/Proof
+# RUN: test -f OUTPUT_DIR/Proof/dummy
+# RUN: test -f test.rar
+
+# Extract again but run the proof_folders hook
+# RUN: rm -rf OUTPUT_DIR
+# RUN: mkdir -p OUTPUT_DIR
+# RUN: %unrarall --clean=proof_folders --full-path --output OUTPUT_DIR/ .
+# RUN: test -f OUTPUT_DIR/test_file
+# RUN: test ! -d OUTPUT_DIR/Proof
+# RUN: test ! -f OUTPUT_DIR/Proof/dummy
+# RUN: test -f test.rar
+
+# Extract again but using --clean=all
+# RUN: rm -rf OUTPUT_DIR
+# RUN: mkdir -p OUTPUT_DIR
+# RUN: %unrarall --clean=all --full-path --output OUTPUT_DIR/ .
+# RUN: test -f OUTPUT_DIR/test_file
+# RUN: test ! -d OUTPUT_DIR/Proof
+# RUN: test ! -f OUTPUT_DIR/Proof/dummy

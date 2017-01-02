@@ -1,0 +1,35 @@
+# REQUIRES: rar_binary
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a simple archive
+# RUN: echo "Test file" > test_file
+# RUN: echo "DS Store file" > .DS_Store
+# RUN: %rar a test.rar test_file .DS_Store
+# RUN: test -f test.rar
+# RUN: rm test_file
+# RUN: rm .DS_Store
+
+# Check that when extracting without cleaning the expected files are present
+# RUN: mkdir -p OUTPUT_DIR
+# RUN: %unrarall --clean=none --full-path --output OUTPUT_DIR/ .
+# RUN: test -f OUTPUT_DIR/test_file
+# RUN: test -f OUTPUT_DIR/.DS_Store
+# RUN: test -f test.rar
+
+# Extract again but run the covers_folders hook
+# RUN: rm -rf OUTPUT_DIR
+# RUN: mkdir -p OUTPUT_DIR
+# RUN: %unrarall --clean=osx_junk --full-path --output OUTPUT_DIR/ .
+# RUN: test -f OUTPUT_DIR/test_file
+# RUN: test ! -f OUTPUT_DIR/.DS_Store
+# RUN: test -f test.rar
+
+# Extract again but using --clean=all
+# RUN: rm -rf OUTPUT_DIR
+# RUN: mkdir -p OUTPUT_DIR
+# RUN: %unrarall --clean=all --full-path --output OUTPUT_DIR/ .
+# RUN: test -f OUTPUT_DIR/test_file
+# RUN: test ! -f OUTPUT_DIR/.DS_Store

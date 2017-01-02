@@ -1,0 +1,16 @@
+# REQUIRES: rar_binary
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a simple test file and put it in a simple rar file
+# RUN: echo "Test file" > test_file
+# RUN: %rar a test.rar test_file
+# RUN: test -f test.rar
+# RUN: rm test_file
+
+# Check the test file is not extracted and rar file is still present
+# RUN: %unrarall --clean=all --dry .
+# RUN: test ! -f test_file
+# RUN: test -f test.rar

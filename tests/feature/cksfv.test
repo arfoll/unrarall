@@ -1,0 +1,37 @@
+# REQUIRES: rar_binary
+# REQUIRES: cfv_binary
+# REQUIRES: cksfv_binary
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a simple archive
+# RUN: echo "Test file" > test_file
+# RUN: %rar a test.rar
+# RUN: test -f test.rar
+# RUN: rm test_file
+
+# Make a sfv file
+# RUN: %cfv -C -f test.sfv test.rar
+
+# FIXME: We should have an option to force cksfv verification
+# RUN: mkdir -p OUTPUT_DIR
+# RUN: %unrarall --clean=none --full-path --output OUTPUT_DIR/ .
+# RUN: test -f OUTPUT_DIR/test_file
+# RUN: rm -rf OUTPUT_DIR
+
+# Now extract again but deliberately corrupt the rar file
+# and check that extraction fails
+# RUN: test -f test.rar
+# RUN: test -f test.sfv
+# RUN: cat <(cat test.rar) <(echo "bogus")  > broken.rar
+# RUN: mv broken.rar test.rar
+
+# FIXME: unrarall's exit code should not be 0. This sucks!
+# RUN: mkdir -p OUTPUT_DIR
+# RUN: %unrarall --clean=none --full-path --output OUTPUT_DIR/ . > %t.log 2>&1
+# RUN: %OutputCheck --file-to-check %t.log %s
+
+# CHECK-L: cksfv: test.rar: Has a different CRC
+# CHECK-L: no rar files extracted

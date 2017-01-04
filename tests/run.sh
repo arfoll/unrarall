@@ -13,5 +13,9 @@ echo Testing 7z backend
 lit -v --param unrarall_backend=7z .
 
 echo "################################################################################"
+echo Testing rar backend
+lit -v --param unrarall_backend=rar .
+
+echo "################################################################################"
 echo Testing auto backend
 lit -v --param unrarall_backend=auto .

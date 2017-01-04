@@ -30,7 +30,7 @@ declare -ix CKSFV=1
 declare -x UNRAR_METHOD="e"
 declare -x CKSFV_FLAGS="-q -g"
 declare -x UNRARALL_BIN="" #Leave empty to let unrarall to loop through UNRAR_BINARIES, setting this will disable searching through UNRAR_BINARIES
-declare -x UNRAR_BINARIES=(unrar 7z) #Array of binaries to try and use, the order here is the order of precedence
+declare -x UNRAR_BINARIES=(unrar rar 7z) #Array of binaries to try and use, the order here is the order of precedence
 declare -x UNRARALL_PID="$$"
 declare -x UNRARALL_EXECUTABLE_NAME=$(basename $0;)
 declare -x UNRARALL_PASSWORD_FILE="${HOME}/.unrar_passwords" #If this exists and unrar asks for a password
@@ -85,7 +85,7 @@ OPTIONS
                      will be extracted in the directory containing the rar file.
 --password-file      Specify path to password file.
                      Default \"${UNRARALL_PASSWORD_FILE}\".
---backend            Force particular backend (unrar or 7z)
+--backend            Force particular backend (unrar, rar, or 7z)
 --version            Give version information version.
 "
 
@@ -149,7 +149,7 @@ function getUnrarFlags()
 {
   #$1 is assumed to be unrar binary name
   case "$1" in
-    unrar)
+    unrar|rar)
       echo -o+ -y
     ;;
     7z)
@@ -172,7 +172,7 @@ function getUnrarFlags()
 function isRarEncrypted()
 {
   case "$1" in
-    unrar)
+    unrar|rar)
       rar_listing=$(unrar l -p- "$2")
       echo "${rar_listing}" | grep -q -E "^\*"
       if [ "$?" -eq 0 ] ; then
@@ -522,6 +522,9 @@ while [ -n "$1" ]; do
             ;;
             7z)
               UNRARALL_BIN=7z
+            ;;
+            rar)
+              UNRARALL_BIN=rar
             ;;
             *)
               message error "Unsupported backend \"${requested_backend}\""

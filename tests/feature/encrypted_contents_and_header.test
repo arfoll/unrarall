@@ -1,0 +1,27 @@
+# FIXME: Require unavailable feature to disable this test.
+# We should declare this feature available when using the
+# right backend. It seems that 7zip can't unrar rar files
+# where the header and contents are encrypted.
+# REQUIRES: not-7zip_backend
+
+# REQUIRES: rar_binary
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a simple test file and put it a rar file
+# with encrypted contents and header.
+# RUN: echo "Test file" > test_file
+# RUN: %rar a -hptest_password test.rar test_file
+# RUN: test -f test.rar
+# RUN: mv test_file test_file.original
+
+# Create password file
+# RUN: echo "test_password" > password_file
+
+# Check the test file is extracted and rar file is removed
+# RUN: %unrarall --password-file ./password_file --clean=rar .
+# RUN: test -f test_file
+# RUN: test ! -f test.rar
+# RUN: diff -q test_file test_file.original

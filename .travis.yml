@@ -10,7 +10,4 @@ install:
   # Note do not do `sudo pip` due to TravisCI using virtualenv
   - pip install lit==0.5.0 OutputCheck==0.4.1
 script:
-  # Use unrarall backend
-  - lit -v tests/
-  # Use 7z backend
-  - lit --param unrarall_args=--7zip tests/
+  - tests/run.sh

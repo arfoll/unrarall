@@ -1,0 +1,23 @@
+# REQUIRES: rar_binary
+# REQUIRES: 7z_backend
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a simple test file and put it in a simple rar file
+# RUN: echo "Test file" > test_file
+# RUN: %rar a test.rar test_file
+# RUN: test -f test.rar
+# RUN: rm test_file
+
+# Check the test file is extracted and rar file is removed
+# RUN: %unrarall --verbose --clean=rar . > %t.log 2>&1
+# RUN: test -f test_file
+# RUN: test ! -f test.rar
+# RUN: %OutputCheck --file-to-check %t.log %s
+
+# CHECK: Using "7z" to extract rar files
+# Test for some 7z specific output
+# CHECK: Extracting archive: .+test\.rar
+# CHECK: Everything is Ok

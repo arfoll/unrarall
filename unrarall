@@ -41,7 +41,7 @@ declare -x UNRARALL_OUTPUT_DIR=""
 function usage()
 {
   echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean=<hook>[,<hook>] ] [ --force ] [ --full-path ]
-                [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv] [ --password-file <file> ]
+                [ --verbose | --quiet ] [--7zip | --backend=<backend> ] [--dry] [--disable-cksfv] [ --password-file <file> ]
                 [ --output DIRECTORY ] <DIRECTORY>
        ${UNRARALL_EXECUTABLE_NAME} --help
        ${UNRARALL_EXECUTABLE_NAME} --version
@@ -85,6 +85,7 @@ OPTIONS
                      will be extracted in the directory containing the rar file.
 --password-file      Specify path to password file.
                      Default \"${UNRARALL_PASSWORD_FILE}\".
+--backend            Force particular backend (unrar or 7z)
 --version            Give version information version.
 "
 
@@ -510,6 +511,24 @@ while [ -n "$1" ]; do
         password_file_name="$(basename $1)"
         UNRARALL_PASSWORD_FILE="${password_file_dir}/${password_file_name}"
         message info "Using \"${UNRARALL_PASSWORD_FILE}\" as password file"
+      ;;
+      --backend=*)
+        # If using `--dry` don't modify UNRARALL_BIN
+        requested_backend="$( echo "$1" | sed 's/--backend=//')"
+        if [ "$UNRARALL_BIN" != 'echo' ]; then
+          case "${requested_backend}" in
+            unrar)
+              UNRARALL_BIN=unrar
+            ;;
+            7z)
+              UNRARALL_BIN=7z
+            ;;
+            *)
+              message error "Unsupported backend \"${requested_backend}\""
+              exit 1
+              ;;
+            esac
+        fi
       ;;
       *)
         # user issued unrecognised option

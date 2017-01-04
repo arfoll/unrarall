@@ -1,0 +1,9 @@
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# RUN: %not %unrarall --backend=XXX . > %t.log 2>&1
+# RUN: %OutputCheck --file-to-check %t.log %s
+
+# CHECK-L: Unsupported backend "XXX"

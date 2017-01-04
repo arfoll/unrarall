@@ -28,9 +28,8 @@
 # RUN: cat <(cat test.rar) <(echo "bogus")  > broken.rar
 # RUN: mv broken.rar test.rar
 
-# FIXME: unrarall's exit code should not be 0. This sucks!
 # RUN: mkdir -p OUTPUT_DIR
-# RUN: %unrarall --clean=none --full-path --output OUTPUT_DIR/ . > %t.log 2>&1
+# RUN: %not %unrarall --clean=none --full-path --output OUTPUT_DIR/ . > %t.log 2>&1
 # RUN: %OutputCheck --file-to-check %t.log %s
 
 # CHECK-L: cksfv: test.rar: Has a different CRC

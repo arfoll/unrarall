@@ -625,6 +625,7 @@ CURRENT_DIR=`pwd`
 
 #find all files
 COUNT=0
+FAIL_COUNT=0
 
 #modify IFS for new lines so filenames with spaces do not get split
 IFS_TEMP=$IFS
@@ -737,6 +738,7 @@ for file in $(${FIND} "$DIR" -depth -iregex '.*\.\(rar\|001\)$'); do
     message ok "ok (forced)";
   else
     let COUNT=COUNT-1
+    let FAIL_COUNT=FAIL_COUNT+1
     [ "$FORCE" -eq 0 ] && message error "failed" || message error "failed (forced)"
   fi
 
@@ -777,4 +779,11 @@ if [ "$QUIET" -ne 1 ]; then
   else
     message error "no rar files extracted"
   fi
+fi
+
+if [ "$FAIL_COUNT" -ne 0 ]; then
+  if [ "$QUIET" -ne 1 ]; then
+    message error "${FAIL_COUNT} failure(s)"
+  fi
+  exit 1
 fi

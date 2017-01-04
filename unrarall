@@ -244,10 +244,11 @@ function detect_clean_up_hooks()
 }
 
 #Prints out an escaped version of 1st argument for use in find's regex
-#This is emacs style regex
+#This is posix egrep style regex
 function find_regex_escape()
 {
-  echo "$1" | sed 's#\\#\\\\#g ;s/\?/\\?/g ; s/\./\\./g ; s/\+/\\+/g ; s/\*/\\*/g; s/\^/\\^/g ; s/\$/\\$/g; s/\[/\\[/g; s/\]/\\]/g;'
+  #echo "$1" | sed 's#\\#\\\\#g ;s/\?/\\?/g ; s/\./\\./g ; s/\+/\\+/g ; s/\*/\\*/g; s/\^/\\^/g ; s/\$/\\$/g; s/\[/\\[/g; s/\]/\\]/g;'
+  echo "$1" | sed 's#\\#\\\\#g ;s/\?/\\?/g ; s/\./\\./g ; s/\+/\\+/g ; s/\*/\\*/g; s/\^/\\^/g ; s/\$/\\$/g; s/\[/\\[/g; s/\]/\\]/g; s/(/\\(/g; s/)/\\)/g; s/|/\\|/g;'
 }
 
 #Helper function for hooks to remove a single file/folder
@@ -305,7 +306,7 @@ function unrarall_clean_rar()
       fi
 
       #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
-      ${FIND} "${_RARFILE_DIR}" -maxdepth 1 -type f -iregex "${_RARFILE_DIR}/$(find_regex_escape "$2")"'\.\(sfv\|[0-9]+\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find_wrapper "${_RARFILE_DIR}" -maxdepth 1 -type f -iregex "${_RARFILE_DIR}/$(find_regex_escape "$2")"'\.(sfv|[0-9]+|[r-z][0-9]+|rar|part[0-9]+\.rar)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute clean-rar hook"
@@ -351,7 +352,7 @@ function unrarall_clean_covers_folders()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing all Covers/ folders"
-      ${FIND} . -depth -type d -iname 'covers' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find_wrapper . -depth -type d -iname 'covers' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute covers_folders hook"
@@ -367,7 +368,7 @@ function unrarall_clean_proof_folders()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing all Proof/ folders"
-      ${FIND} . -depth -type d -iname 'proof' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find_wrapper . -depth -type d -iname 'proof' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute proof_folders hook"
@@ -383,7 +384,7 @@ function unrarall_clean_sample_folders()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing all Sample/ folders"
-      ${FIND} . -type d -iname 'sample' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find_wrapper . -type d -iname 'sample' -exec ${RM} -rf $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute sample_folders hook"
@@ -399,7 +400,7 @@ function unrarall_clean_sample_videos()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing video files with \"sample\" prefix"
-      ${FIND} . -type f -iregex '^\./sample.*'"$(find_regex_escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find_wrapper . -type f -iregex '^\./sample.*'"$(find_regex_escape "$2")"'\.(asf|avi|mkv|mp4|m4v|mov|mpg|mpeg|ogg|webm|wmv)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute sample_videos hook"
@@ -419,7 +420,7 @@ function unrarall_clean_empty_folders()
         message error "RARFILE_DIR (${3}) is not a directory"
         return
       fi
-      ${FIND} "${3}" -depth -mindepth 1 -type d -empty -exec rmdir $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      find_wrapper "${3}" -depth -mindepth 1 -type d -empty -exec rmdir $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute empty_folders hook"
@@ -548,8 +549,27 @@ while [ -n "$1" ]; do
     shift
 done
 
-if [[ $OSTYPE == darwin* ]]; then 
-    type -P gfind &>/dev/null && FIND=gfind || { message error "Please install findutils using HomeBrew. (http://brew.sh/)"; exit 1; }
+# Detect the version of find available and create a wrapper function that
+# that will behave like find using posix egrep style regular expressions.
+# This is to force consistency across multiple platforms.
+if [ "X$(${FIND} --version >/dev/null 2>&1 ; echo $?)" == "X0" ]; then
+  # GNU find supports `--version`
+  [ $VERBOSE -eq 1 ] && message info "Detected GNU find"
+  function find_wrapper() {
+    if [ $# -lt 2 ]; then
+      message error "Invalid args to find_wrapper"
+      exit 1
+    fi
+    args=("$@")
+    unset args[0]
+    ${FIND} "$1" -regextype posix-egrep "${args[@]}"
+  }
+else
+  # Assume *BSD/macOS find
+  [ $VERBOSE -eq 1 ] && message info "Detected BSD find"
+  function find_wrapper() {
+    ${FIND} -E "$@"
+  }
 fi
 
 detect_clean_up_hooks
@@ -640,7 +660,7 @@ if [ "$CKSFV" -eq 1 ]; then
 fi
 
 # assuming only the .rar files are of interest
-for file in $(${FIND} "$DIR" -depth -iregex '.*\.\(rar\|001\)$'); do
+for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
 
   filename=`basename "${file}"`
   # Strip extension off filename

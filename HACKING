@@ -14,7 +14,7 @@ This is a bash script and so is fairly unix friendly, however all testing by dev
 
 == Clean up hooks ==
 
-Unrarall provides a modular approach to cleaning up unwanted files by providing clean up hooks. A clean up hook is simply a bash function who's name is of the form "unrarall-clean-<hook>" where "<hook>" is the name of the hook. The hook should have two behaviours. 
+Unrarall provides a modular approach to cleaning up unwanted files by providing clean up hooks. A clean up hook is simply a bash function who's name is of the form "unrarall_clean_<hook>" where "<hook>" is the name of the hook. The hook should have two behaviours.
 
 1. Produce help information that informs a user what the hook does. This information is shown when a user uses --help on unrarall.
 2. Perform the clean up. The writer of the hook may assume the current directory is the directory containing the rar files that have just been extracted.
@@ -29,7 +29,7 @@ Alternatively it is possible define unrarall hooks outside the unrarall script a
 
 1. Define the function .e.g.
 
-function unrarall-clean-dummy_hook()
+function unrarall_clean_dummy_hook()
 {
   echo "This hook doesn't do anything"
 }
@@ -40,7 +40,7 @@ $ declare -F
 
 2. Export the function so it will be available to sub shells. For example this can be done by running
 
-$ declare -fx unrarall-clean-dummy_hook
+$ declare -fx unrarall_clean_dummy_hook
 
 3. You can test that unrarall knows about your hook by running
 

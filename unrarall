@@ -87,10 +87,10 @@ OPTIONS
 "
 
 #List the detected clean up hooks with their help information
-detect-clean-up-hooks
+detect_clean_up_hooks
 echo "CLEAN UP HOOKS"
 for hook in ${UNRARALL_DETECTED_CLEAN_UP_HOOKS[*]} ; do
-  echo "$hook : $( unrarall-clean-${hook} help)"
+  echo "$hook : $( unrarall_clean_${hook} help)"
 done
 
 echo "all : Execute all the above hooks. They are executed in the order they are listed above."
@@ -102,7 +102,7 @@ VERSION: $UNRARALL_VERSION
 "
 }
 
-function clean-up
+function clean_up
 {
   #perform any necessary clean up
   message error "${UNRARALL_EXECUTABLE_NAME} is exiting"
@@ -110,7 +110,7 @@ function clean-up
 }
 
 #Catch exit signals
-trap clean-up SIGQUIT SIGINT SIGTERM
+trap clean_up SIGQUIT SIGINT SIGTERM
 
 #function to display pretty messages
 function message()
@@ -216,22 +216,22 @@ function isRarEncrypted()
   esac
 }
 
-function detect-clean-up-hooks()
+function detect_clean_up_hooks()
 {
   [ $VERBOSE -eq 1 ] && message info "Detecting clean up hooks..."
-  HOOKS=$(declare -F | grep -Eo ' unrarall-clean-[_a-z-]+')
+  HOOKS=$(declare -F | grep -Eo ' unrarall_clean_[_a-z]+')
   index=0
   EMPTY_FOLDER=0
   for hook in $HOOKS ;do
     [ $VERBOSE -eq 1 ] && message info "Found $hook";
 
-    if [ "$hook" == "unrarall-clean-empty_folders" ]; then
+    if [ "$hook" == "unrarall_clean_empty_folders" ]; then
         # it is executed last for --clean=all
         EMPTY_FOLDER=1
         continue
     fi
 
-    UNRARALL_DETECTED_CLEAN_UP_HOOKS[$index]=$( echo "$hook" | sed 's/unrarall-clean-//')
+    UNRARALL_DETECTED_CLEAN_UP_HOOKS[$index]=$( echo "$hook" | sed 's/unrarall_clean_//')
     ((index++))
   done
 
@@ -242,14 +242,14 @@ function detect-clean-up-hooks()
 
 #Prints out an escaped version of 1st argument for use in find's regex
 #This is emacs style regex
-function find-regex-escape()
+function find_regex_escape()
 {
   echo "$1" | sed 's#\\#\\\\#g ;s/\?/\\?/g ; s/\./\\./g ; s/\+/\\+/g ; s/\*/\\*/g; s/\^/\\^/g ; s/\$/\\$/g; s/\[/\\[/g; s/\]/\\]/g;'
 }
 
 #Helper function for hooks to remove a single file/folder
 # unrarall-remove-file <FILE> <HOOKNAME>
-function unrarall-remove-file-or-folder()
+function unrarall_remove_file_or_folder()
 {
       if [ -f "./${1}" -o -d "./${1}" ]; then
         [ "$VERBOSE" -eq 1 ] && message nnl "Hook ${2}: Found ${1} . Attempting to remove..."
@@ -261,7 +261,7 @@ function unrarall-remove-file-or-folder()
 }
 
 #Start of clean-up hooks
-# unrarall-clean-* <MODE> <SFILENAME> <RARFILE_DIR>
+# unrarall_clean_* <MODE> <SFILENAME> <RARFILE_DIR>
 # <MODE> is either help or clean
 # <SFILENAME> is the name of the rar file but with rar suffix removed
 # <RARFILE_DIR> is the directory containing the rar files
@@ -270,7 +270,7 @@ function unrarall-remove-file-or-folder()
 # Hooks can assume that the current working directory is the directory where files
 # extracted. This is not necessarily the same as <RARFILE_DIR> is --output was specified
 
-function unrarall-clean-nfo()
+function unrarall_clean_nfo()
 {
   case "$1" in
     help)
@@ -286,7 +286,7 @@ function unrarall-clean-nfo()
   esac
 }
 
-function unrarall-clean-rar()
+function unrarall_clean_rar()
 {
   case "$1" in
     help)
@@ -302,7 +302,7 @@ function unrarall-clean-rar()
       fi
 
       #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
-      ${FIND} "${_RARFILE_DIR}" -maxdepth 1 -type f -iregex "${_RARFILE_DIR}/$(find-regex-escape "$2")"'\.\(sfv\|[0-9]+\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      ${FIND} "${_RARFILE_DIR}" -maxdepth 1 -type f -iregex "${_RARFILE_DIR}/$(find_regex_escape "$2")"'\.\(sfv\|[0-9]+\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute clean-rar hook"
@@ -310,14 +310,14 @@ function unrarall-clean-rar()
   esac
 }
 
-function unrarall-clean-osx_junk()
+function unrarall_clean_osx_junk()
 {
   case "$1" in
     help)
       echo "Removes junk OSX files"
     ;;
     clean)
-      unrarall-remove-file-or-folder ".DS_Store" "osx_junk"
+      unrarall_remove_file_or_folder ".DS_Store" "osx_junk"
     ;;
     *)
       message error "Could not execute osx_junk hook"
@@ -325,14 +325,14 @@ function unrarall-clean-osx_junk()
   esac
 }
 
-function unrarall-clean-windows_junk()
+function unrarall_clean_windows_junk()
 {
   case "$1" in
     help)
       echo "Removes junk Windows files"
     ;;
     clean)
-      unrarall-remove-file-or-folder "Thumbs.db" "windows_junk"
+      unrarall_remove_file_or_folder "Thumbs.db" "windows_junk"
     ;;
     *)
       message error "Could not execute windows_junk hook"
@@ -340,7 +340,7 @@ function unrarall-clean-windows_junk()
   esac
 }
 
-function unrarall-clean-covers_folders()
+function unrarall_clean_covers_folders()
 {
   case "$1" in
     help)
@@ -356,7 +356,7 @@ function unrarall-clean-covers_folders()
   esac
 }
 
-function unrarall-clean-proof_folders()
+function unrarall_clean_proof_folders()
 {
   case "$1" in
     help)
@@ -372,7 +372,7 @@ function unrarall-clean-proof_folders()
   esac
 }
 
-function unrarall-clean-sample_folders()
+function unrarall_clean_sample_folders()
 {
   case "$1" in
     help)
@@ -388,7 +388,7 @@ function unrarall-clean-sample_folders()
   esac
 }
 
-function unrarall-clean-sample_videos()
+function unrarall_clean_sample_videos()
 {
   case "$1" in
     help)
@@ -396,7 +396,7 @@ function unrarall-clean-sample_videos()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing video files with \"sample\" prefix"
-      ${FIND} . -type f -iregex '^\./sample.*'"$(find-regex-escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      ${FIND} . -type f -iregex '^\./sample.*'"$(find_regex_escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute sample_videos hook"
@@ -404,7 +404,7 @@ function unrarall-clean-sample_videos()
   esac
 }
 
-function unrarall-clean-empty_folders()
+function unrarall_clean_empty_folders()
 {
   case "$1" in
     help)
@@ -513,7 +513,7 @@ if [[ $OSTYPE == darwin* ]]; then
     type -P gfind &>/dev/null && FIND=gfind || { message error "Please install findutils using HomeBrew. (http://brew.sh/)"; exit 1; }
 fi
 
-detect-clean-up-hooks
+detect_clean_up_hooks
 
 #Verify selected clean-up hooks are ok
 if [ ${#UNRARALL_CLEAN_UP_HOOKS_TO_RUN[*]} -eq 1 ] && [ $( echo "${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[0]}" | grep -Ec '^(all|none)$' ) -eq 1 ] ; then
@@ -712,13 +712,13 @@ for file in $(${FIND} "$DIR" -depth -iregex '.*\.\(rar\|001\)$'); do
         #Run every clean up hook
         for hook in ${UNRARALL_DETECTED_CLEAN_UP_HOOKS[*]} ; do
           message nnl "$hook "
-          ( unrarall-clean-$hook clean $sfilename "${RARFILE_DIR}" )
+          ( unrarall_clean_$hook clean $sfilename "${RARFILE_DIR}" )
         done
       else
         #Run selected clean up hooks
         for hook in ${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[*]} ; do
           message nnl "$hook "
-          ( unrarall-clean-$hook clean $sfilename "${RARFILE_DIR}")
+          ( unrarall_clean_$hook clean $sfilename "${RARFILE_DIR}")
         done
       fi
       message ok "Finished running hooks"

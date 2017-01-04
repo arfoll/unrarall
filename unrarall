@@ -622,8 +622,6 @@ for file in $(${FIND} "$DIR" -depth -iregex '.*\.\(rar\|001\)$'); do
       continue
     fi
   fi
-  let COUNT=COUNT+1
-  dirname=`dirname "$file"`
 
   # check file really is a rar file
   if [[ ! "`file --mime "${file}"`" =~ $MATCHRARMIME ]]; then
@@ -631,7 +629,10 @@ for file in $(${FIND} "$DIR" -depth -iregex '.*\.\(rar\|001\)$'); do
     continue
   fi
 
+  let COUNT=COUNT+1
+
   # move to directory
+  dirname=`dirname "$file"`
   cd "$dirname"
   RARFILE_DIR="$(pwd)"
 

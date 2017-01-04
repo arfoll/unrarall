@@ -1,10 +1,5 @@
 # REQUIRES: rar_binary
 
-# FIXME: This test should pass but there's a bug in unrarall
-# which means the counter is not updated properly if the mime
-# data is detected as bad.
-# XFAIL: *
-
 # Remove old temporary working directory
 # RUN: rm -rf %t
 # RUN: mkdir -p %t

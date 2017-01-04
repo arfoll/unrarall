@@ -41,7 +41,7 @@ declare -x UNRARALL_OUTPUT_DIR=""
 function usage()
 {
   echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean=<hook>[,<hook>] ] [ --force ] [ --full-path ]
-                [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv]
+                [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv] [ --password-file <file> ]
                 [ --output DIRECTORY ] <DIRECTORY>
        ${UNRARALL_EXECUTABLE_NAME} --help
        ${UNRARALL_EXECUTABLE_NAME} --version
@@ -83,6 +83,8 @@ OPTIONS
                      screen
 -o, --output         Specify a directory to extract rar files. By default files
                      will be extracted in the directory containing the rar file.
+--password-file      Specify path to password file.
+                     Default \"${UNRARALL_PASSWORD_FILE}\".
 --version            Give version information version.
 "
 
@@ -493,6 +495,21 @@ while [ -n "$1" ]; do
         # Make the directory absolute. This is necessary
         # because we may be changing directory multiple times
         UNRARALL_OUTPUT_DIR="$(cd "${UNRARALL_OUTPUT_DIR}" ; pwd)"
+      ;;
+      --password-file)
+        shift
+        if [ ! -e "$1" ]; then
+          message error "\"$1\" does not exist."
+          exit 1
+        fi
+        if [ ! -f "$1" ] && [ ! -L "$1" ]; then
+          message error "\"$1\" is not a file/symlink."
+          exit 1
+        fi
+        password_file_dir="$(cd $(dirname $1) && pwd)"
+        password_file_name="$(basename $1)"
+        UNRARALL_PASSWORD_FILE="${password_file_dir}/${password_file_name}"
+        message info "Using \"${UNRARALL_PASSWORD_FILE}\" as password file"
       ;;
       *)
         # user issued unrecognised option

@@ -19,5 +19,5 @@
 
 # CHECK: Using "7z" to extract rar files
 # Test for some 7z specific output
-# CHECK: Extracting archive: .+test\.rar
+# CHECK: (Extracting|Processing) archive: .+test\.rar
 # CHECK: Everything is Ok

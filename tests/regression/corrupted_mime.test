@@ -16,8 +16,7 @@
 # RUN: mv broken.rar test.rar
 
 # RUN: mkdir -p OUTPUT_DIR
-# FIXME: unrarall's exit code should not be 0.
-# RUN: %unrarall --clean=none --full-path --output OUTPUT_DIR/ . > %t.log 2>&1
+# RUN: %not %unrarall --clean=none --full-path --output OUTPUT_DIR/ . > %t.log 2>&1
 # RUN: %OutputCheck --file-to-check %t.log %s
 
 # CHECK: Skipping file ".+" because it does not appear to be a valid rar file

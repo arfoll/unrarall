@@ -666,6 +666,8 @@ for file in $(${FIND} "$DIR" -depth -iregex '.*\.\(rar\|001\)$'); do
   # check file really is a rar file
   if [[ ! "`file --mime "${file}"`" =~ $MATCHRARMIME ]]; then
     message error "Skipping file \"${file}\" because it does not appear to be a valid rar file."
+    # Treat this as a failure so we exit with a non zero exit code
+    let FAIL_COUNT=FAIL_COUNT+1
     continue
   fi
 

@@ -5,7 +5,8 @@
 # RUN: cd %t
 
 # Make a simple test file.
-# RUN: dd if=/dev/zero of=`pwd`/data count=2 bs=1M
+# State block size in bytes because *BSD dd doesn't support `M` suffix.
+# RUN: dd if=/dev/zero of=`pwd`/data count=2 bs=1048576
 # RUN: test -f data
 
 # Make the rar volumes.

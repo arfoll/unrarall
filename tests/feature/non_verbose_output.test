@@ -1,0 +1,20 @@
+# REQUIRES: rar_binary
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a simple test file and put it in a simple rar file
+# RUN: echo "Test file" > test_file
+# RUN: %rar a test.rar test_file
+# RUN: test -f test.rar
+# RUN: rm test_file
+
+# Check the test file is extracted and rar file is removed
+# RUN: %unrarall --clean=rar . > %t.log 2>&1
+# RUN: test -f test_file
+# RUN: test ! -f test.rar
+# RUN: %OutputCheck --file-to-check %t.log %s
+
+# CHECK: Extracting \(e\) "/.+test\.rar"\.\.\..*ok.*$
+# CHECK-L: 1 rar files found, extracted and then cleaned using the following hooks: rar

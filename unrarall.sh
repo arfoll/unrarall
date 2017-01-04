@@ -41,7 +41,7 @@ declare -x UNRARALL_OUTPUT_DIR=""
 function usage()
 {
   echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean=<hook>[,<hook>] ] [ --force ] [ --full-path ]
-                [ --verbose | --quiet ] [--7zip | --backend=<backend> ] [--dry] [--disable-cksfv] [ --password-file <file> ]
+                [ --verbose | --quiet ] [--7zip] [--dry] [--disable-cksfv]
                 [ --output DIRECTORY ] <DIRECTORY>
        ${UNRARALL_EXECUTABLE_NAME} --help
        ${UNRARALL_EXECUTABLE_NAME} --version
@@ -83,17 +83,14 @@ OPTIONS
                      screen
 -o, --output         Specify a directory to extract rar files. By default files
                      will be extracted in the directory containing the rar file.
---password-file      Specify path to password file.
-                     Default \"${UNRARALL_PASSWORD_FILE}\".
---backend            Force particular backend (unrar, rar, or 7z)
 --version            Give version information version.
 "
 
 #List the detected clean up hooks with their help information
-detect_clean_up_hooks
+detect-clean-up-hooks
 echo "CLEAN UP HOOKS"
 for hook in ${UNRARALL_DETECTED_CLEAN_UP_HOOKS[*]} ; do
-  echo "$hook : $( unrarall_clean_${hook} help)"
+  echo "$hook : $( unrarall-clean-${hook} help)"
 done
 
 echo "all : Execute all the above hooks. They are executed in the order they are listed above."
@@ -105,7 +102,7 @@ VERSION: $UNRARALL_VERSION
 "
 }
 
-function clean_up
+function clean-up
 {
   #perform any necessary clean up
   message error "${UNRARALL_EXECUTABLE_NAME} is exiting"
@@ -113,7 +110,7 @@ function clean_up
 }
 
 #Catch exit signals
-trap clean_up SIGQUIT SIGINT SIGTERM
+trap clean-up SIGQUIT SIGINT SIGTERM
 
 #function to display pretty messages
 function message()
@@ -149,7 +146,7 @@ function getUnrarFlags()
 {
   #$1 is assumed to be unrar binary name
   case "$1" in
-    unrar|rar)
+    unrar)
       echo -o+ -y
     ;;
     rar)
@@ -175,7 +172,7 @@ function getUnrarFlags()
 function isRarEncrypted()
 {
   case "$1" in
-    unrar|rar)
+    unrar)
       rar_listing=$(unrar l -p- "$2")
       echo "${rar_listing}" | grep -q -E "^\*"
       if [ "$?" -eq 0 ] ; then
@@ -239,22 +236,22 @@ function isRarEncrypted()
   esac
 }
 
-function detect_clean_up_hooks()
+function detect-clean-up-hooks()
 {
   [ $VERBOSE -eq 1 ] && message info "Detecting clean up hooks..."
-  HOOKS=$(declare -F | grep -Eo ' unrarall_clean_[_a-z]+')
+  HOOKS=$(declare -F | grep -Eo ' unrarall-clean-[_a-z-]+')
   index=0
   EMPTY_FOLDER=0
   for hook in $HOOKS ;do
     [ $VERBOSE -eq 1 ] && message info "Found $hook";
 
-    if [ "$hook" == "unrarall_clean_empty_folders" ]; then
+    if [ "$hook" == "unrarall-clean-empty_folders" ]; then
         # it is executed last for --clean=all
         EMPTY_FOLDER=1
         continue
     fi
 
-    UNRARALL_DETECTED_CLEAN_UP_HOOKS[$index]=$( echo "$hook" | sed 's/unrarall_clean_//')
+    UNRARALL_DETECTED_CLEAN_UP_HOOKS[$index]=$( echo "$hook" | sed 's/unrarall-clean-//')
     ((index++))
   done
 
@@ -265,14 +262,14 @@ function detect_clean_up_hooks()
 
 #Prints out an escaped version of 1st argument for use in find's regex
 #This is emacs style regex
-function find_regex_escape()
+function find-regex-escape()
 {
   echo "$1" | sed 's#\\#\\\\#g ;s/\?/\\?/g ; s/\./\\./g ; s/\+/\\+/g ; s/\*/\\*/g; s/\^/\\^/g ; s/\$/\\$/g; s/\[/\\[/g; s/\]/\\]/g;'
 }
 
 #Helper function for hooks to remove a single file/folder
 # unrarall-remove-file <FILE> <HOOKNAME>
-function unrarall_remove_file_or_folder()
+function unrarall-remove-file-or-folder()
 {
       if [ -f "./${1}" -o -d "./${1}" ]; then
         [ "$VERBOSE" -eq 1 ] && message nnl "Hook ${2}: Found ${1} . Attempting to remove..."
@@ -284,7 +281,7 @@ function unrarall_remove_file_or_folder()
 }
 
 #Start of clean-up hooks
-# unrarall_clean_* <MODE> <SFILENAME> <RARFILE_DIR>
+# unrarall-clean-* <MODE> <SFILENAME> <RARFILE_DIR>
 # <MODE> is either help or clean
 # <SFILENAME> is the name of the rar file but with rar suffix removed
 # <RARFILE_DIR> is the directory containing the rar files
@@ -293,7 +290,7 @@ function unrarall_remove_file_or_folder()
 # Hooks can assume that the current working directory is the directory where files
 # extracted. This is not necessarily the same as <RARFILE_DIR> is --output was specified
 
-function unrarall_clean_nfo()
+function unrarall-clean-nfo()
 {
   case "$1" in
     help)
@@ -309,7 +306,7 @@ function unrarall_clean_nfo()
   esac
 }
 
-function unrarall_clean_rar()
+function unrarall-clean-rar()
 {
   case "$1" in
     help)
@@ -325,7 +322,7 @@ function unrarall_clean_rar()
       fi
 
       #-maxdepth 1 is very important, we only want to delete rar files in the current directory!
-      ${FIND} "${_RARFILE_DIR}" -maxdepth 1 -type f -iregex "${_RARFILE_DIR}/$(find_regex_escape "$2")"'\.\(sfv\|[0-9]+\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      ${FIND} "${_RARFILE_DIR}" -maxdepth 1 -type f -iregex "${_RARFILE_DIR}/$(find-regex-escape "$2")"'\.\(sfv\|[0-9]+\|[r-z][0-9]+\|rar\|part[0-9]+\.rar\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute clean-rar hook"
@@ -333,14 +330,14 @@ function unrarall_clean_rar()
   esac
 }
 
-function unrarall_clean_osx_junk()
+function unrarall-clean-osx_junk()
 {
   case "$1" in
     help)
       echo "Removes junk OSX files"
     ;;
     clean)
-      unrarall_remove_file_or_folder ".DS_Store" "osx_junk"
+      unrarall-remove-file-or-folder ".DS_Store" "osx_junk"
     ;;
     *)
       message error "Could not execute osx_junk hook"
@@ -348,14 +345,14 @@ function unrarall_clean_osx_junk()
   esac
 }
 
-function unrarall_clean_windows_junk()
+function unrarall-clean-windows_junk()
 {
   case "$1" in
     help)
       echo "Removes junk Windows files"
     ;;
     clean)
-      unrarall_remove_file_or_folder "Thumbs.db" "windows_junk"
+      unrarall-remove-file-or-folder "Thumbs.db" "windows_junk"
     ;;
     *)
       message error "Could not execute windows_junk hook"
@@ -363,7 +360,7 @@ function unrarall_clean_windows_junk()
   esac
 }
 
-function unrarall_clean_covers_folders()
+function unrarall-clean-covers_folders()
 {
   case "$1" in
     help)
@@ -379,7 +376,7 @@ function unrarall_clean_covers_folders()
   esac
 }
 
-function unrarall_clean_proof_folders()
+function unrarall-clean-proof_folders()
 {
   case "$1" in
     help)
@@ -395,7 +392,7 @@ function unrarall_clean_proof_folders()
   esac
 }
 
-function unrarall_clean_sample_folders()
+function unrarall-clean-sample_folders()
 {
   case "$1" in
     help)
@@ -411,7 +408,7 @@ function unrarall_clean_sample_folders()
   esac
 }
 
-function unrarall_clean_sample_videos()
+function unrarall-clean-sample_videos()
 {
   case "$1" in
     help)
@@ -419,7 +416,7 @@ function unrarall_clean_sample_videos()
     ;;
     clean)
       [ "$VERBOSE" -eq 1 ] && message info "Removing video files with \"sample\" prefix"
-      ${FIND} . -type f -iregex '^\./sample.*'"$(find_regex_escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
+      ${FIND} . -type f -iregex '^\./sample.*'"$(find-regex-escape "$2")"'\.\(asf\|avi\|mkv\|mp4\|m4v\|mov\|mpg\|mpeg\|ogg\|webm\|wmv\)$' -exec ${RM} -f $( [ $VERBOSE -eq 1 ] && echo '-v') '{}' \;
     ;;
     *)
       message error "Could not execute sample_videos hook"
@@ -427,7 +424,7 @@ function unrarall_clean_sample_videos()
   esac
 }
 
-function unrarall_clean_empty_folders()
+function unrarall-clean-empty_folders()
 {
   case "$1" in
     help)
@@ -517,42 +514,6 @@ while [ -n "$1" ]; do
         # because we may be changing directory multiple times
         UNRARALL_OUTPUT_DIR="$(cd "${UNRARALL_OUTPUT_DIR}" ; pwd)"
       ;;
-      --password-file)
-        shift
-        if [ ! -e "$1" ]; then
-          message error "\"$1\" does not exist."
-          exit 1
-        fi
-        if [ ! -f "$1" ] && [ ! -L "$1" ]; then
-          message error "\"$1\" is not a file/symlink."
-          exit 1
-        fi
-        password_file_dir="$(cd $(dirname $1) && pwd)"
-        password_file_name="$(basename $1)"
-        UNRARALL_PASSWORD_FILE="${password_file_dir}/${password_file_name}"
-        message info "Using \"${UNRARALL_PASSWORD_FILE}\" as password file"
-      ;;
-      --backend=*)
-        # If using `--dry` don't modify UNRARALL_BIN
-        requested_backend="$( echo "$1" | sed 's/--backend=//')"
-        if [ "$UNRARALL_BIN" != 'echo' ]; then
-          case "${requested_backend}" in
-            unrar)
-              UNRARALL_BIN=unrar
-            ;;
-            7z)
-              UNRARALL_BIN=7z
-            ;;
-            rar)
-              UNRARALL_BIN=rar
-            ;;
-            *)
-              message error "Unsupported backend \"${requested_backend}\""
-              exit 1
-              ;;
-            esac
-        fi
-      ;;
       *)
         # user issued unrecognised option
         message error "Unrecognised option: $1"
@@ -572,7 +533,7 @@ if [[ $OSTYPE == darwin* ]]; then
     type -P gfind &>/dev/null && FIND=gfind || { message error "Please install findutils using HomeBrew. (http://brew.sh/)"; exit 1; }
 fi
 
-detect_clean_up_hooks
+detect-clean-up-hooks
 
 #Verify selected clean-up hooks are ok
 if [ ${#UNRARALL_CLEAN_UP_HOOKS_TO_RUN[*]} -eq 1 ] && [ $( echo "${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[0]}" | grep -Ec '^(all|none)$' ) -eq 1 ] ; then
@@ -681,6 +642,8 @@ for file in $(${FIND} "$DIR" -depth -iregex '.*\.\(rar\|001\)$'); do
       continue
     fi
   fi
+  let COUNT=COUNT+1
+  dirname=`dirname "$file"`
 
   # check file really is a rar file
   if [[ ! "`file --mime "${file}"`" =~ $MATCHRARMIME ]]; then
@@ -688,10 +651,7 @@ for file in $(${FIND} "$DIR" -depth -iregex '.*\.\(rar\|001\)$'); do
     continue
   fi
 
-  let COUNT=COUNT+1
-
   # move to directory
-  dirname=`dirname "$file"`
   cd "$dirname"
   RARFILE_DIR="$(pwd)"
 
@@ -725,10 +685,8 @@ for file in $(${FIND} "$DIR" -depth -iregex '.*\.\(rar\|001\)$'); do
     if [ "${file_encrypted}" -eq 0 ]; then
       # The file is not encrypted. We're extracting without a password
       if [ "$VERBOSE" -eq 1 ] || [ "$UNRARALL_BIN" = "echo" ] ; then
-echo -e "\nx:no pwd: ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- $filenameAbsolute"
         ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- "$filenameAbsolute"
       else
-echo -e "\nx:no pwd2: ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- $filenameAbsolute >/dev/null"
         ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p- "$filenameAbsolute" >/dev/null
       fi
       SUCCESS=$?
@@ -738,10 +696,8 @@ echo -e "\nx:no pwd2: ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARAL
         [ $VERBOSE -eq 1 ] && message info "This archive is encrypted. Trying passwords from password file \"${UNRARALL_PASSWORD_FILE}\"..."
         while true; do read password || break
           if [ "$VERBOSE" -eq 1 ] || [ "$UNRARALL_BIN" = "echo" ] ; then
-echo -e "\nx: PWD: ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p$password $filenameAbsolute"
             ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p"$password" "$filenameAbsolute"
           else
-echo -e "\nx: PWD2: ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p$password $filenameAbsolute >/dev/null"            
             ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_BIN}) -p"$password" "$filenameAbsolute" >/dev/null
           fi
           SUCCESS=$?
@@ -776,13 +732,13 @@ echo -e "\nx: PWD2: ${UNRARALL_BIN} ${UNRAR_METHOD} $( getUnrarFlags ${UNRARALL_
         #Run every clean up hook
         for hook in ${UNRARALL_DETECTED_CLEAN_UP_HOOKS[*]} ; do
           message nnl "$hook "
-          ( unrarall_clean_$hook clean $sfilename "${RARFILE_DIR}" )
+          ( unrarall-clean-$hook clean $sfilename "${RARFILE_DIR}" )
         done
       else
         #Run selected clean up hooks
         for hook in ${UNRARALL_CLEAN_UP_HOOKS_TO_RUN[*]} ; do
           message nnl "$hook "
-          ( unrarall_clean_$hook clean $sfilename "${RARFILE_DIR}")
+          ( unrarall-clean-$hook clean $sfilename "${RARFILE_DIR}")
         done
       fi
       message ok "Finished running hooks"

@@ -1,8 +1,6 @@
-# FIXME: Require unavailable feature to disable this test.
-# We should declare this feature available when using the
-# right backend. It seems that 7zip can't unrar rar files
-# where the header and contents are encrypted.
-# REQUIRES: not-7zip_backend
+# It seems that 7zip can't unrar rar files when the header and contents are
+# encrypted.
+# REQUIRES: not-7z_backend
 
 # REQUIRES: rar_binary
 # Remove old temporary working directory

@@ -1,13 +1,19 @@
-# TravisCI doesn't support testing bash versions so
-# just pretend we are testing a python project
-language: python
-python:
-  - "3.5"
-dist: trusty
-sudo: required
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      # TravisCI doesn't support testing bash versions so
+      # just pretend we are testing a python project
+      language: python
+      python: 3.5
+      sudo: required
+    - os: osx
+      # FIXME: Workaround lack of python support
+      # on TravisCI osx builders.
+      # https://github.com/travis-ci/travis-ci/issues/2312
+      language: generic
+      sudo: required
 install:
-  - sudo apt-get install cfv cksfv p7zip-full p7zip-rar unrar rar
-  # Note do not do `sudo pip` due to TravisCI using virtualenv
-  - pip install lit==0.5.0 OutputCheck==0.4.1
+  - tests/travisci_install.sh
 script:
   - tests/run.sh

@@ -573,6 +573,14 @@ done
 # Detect the version of find available and create a wrapper function that
 # that will behave like find using posix egrep style regular expressions.
 # This is to force consistency across multiple platforms.
+
+# FIXME: Require -iregex support for now. We should try to teach the wrappers
+# how to fall back to `-regex` or something...
+if [ "$(${FIND} /dev/null -iregex 'test' > /dev/null 2>&1 ; echo $?)" -ne "0" ]; then
+  message error "Your version of find (\"${FIND}\") does not support the \"-iregex\" flag"
+  exit 1
+fi
+
 if [ "X$(${FIND} --version >/dev/null 2>&1 ; echo $?)" == "X0" ]; then
   # GNU find supports `--version`
   [ $VERBOSE -eq 1 ] && message info "Detected GNU find"

@@ -23,4 +23,4 @@
 # Check the test file is extracted and rar files are removed
 # RUN: %unrarall --clean=rar .
 # RUN: test -f data
-# RUN: test "$(%find . -type f -iname '*.rar' | wc -l)" -eq 0
+# RUN: test "$((%find . -type f -iname '*.rar' || echo '1') | wc -l)" -eq 0

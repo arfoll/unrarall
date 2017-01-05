@@ -1,0 +1,9 @@
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# RUN: %not %unrarall --find-binary false . > %t.log 2>&1
+# RUN: %OutputCheck --file-to-check %t.log %s
+
+# CHECK-L: Your version of find ("false") does not support the "-iregex" flag

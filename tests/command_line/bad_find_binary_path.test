@@ -1,0 +1,10 @@
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# RUN: test ! -e `pwd`/foo
+# RUN: %not %unrarall --find-binary `pwd`/foo . > %t.log 2>&1
+# RUN: %OutputCheck --file-to-check %t.log %s
+
+# CHECK: Cannot find the "find" binary \(".+"\) in your path

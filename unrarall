@@ -43,7 +43,7 @@ function usage()
 {
   echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean=<hook>[,<hook>] ] [ --force ] [ --full-path ]
                 [ --verbose | --quiet ] [--7zip | --backend=<backend> ] [--dry] [--disable-cksfv] [ --password-file <file> ]
-                [ --output DIRECTORY ] <DIRECTORY>
+                [ --output DIRECTORY ] [ --find-binary <binary_path> ] <DIRECTORY>
        ${UNRARALL_EXECUTABLE_NAME} --help
        ${UNRARALL_EXECUTABLE_NAME} --version
 
@@ -87,6 +87,7 @@ OPTIONS
 --password-file      Specify path to password file.
                      Default \"${UNRARALL_PASSWORD_FILE}\".
 --backend            Force particular backend (unrar, rar, or 7z)
+--find-binary        Force a particular find binary.
 --version            Give version information version.
 "
 
@@ -555,6 +556,10 @@ while [ -n "$1" ]; do
             esac
         fi
       ;;
+      --find-binary)
+        shift
+        FIND="${1}"
+      ;;
       *)
         # user issued unrecognised option
         message error "Unrecognised option: $1"
@@ -573,6 +578,12 @@ done
 # Detect the version of find available and create a wrapper function that
 # that will behave like find using posix egrep style regular expressions.
 # This is to force consistency across multiple platforms.
+
+# Check FIND binary exists
+if ! type -P "${FIND}" > /dev/null 2>&1 ; then
+  message error "Cannot find the \"find\" binary (\"${FIND}\") in your path"
+  exit 1
+fi
 
 # FIXME: Require -iregex support for now. We should try to teach the wrappers
 # how to fall back to `-regex` or something...
@@ -600,6 +611,7 @@ else
     ${FIND} -E "$@"
   }
 fi
+[ $VERBOSE -eq 1 ] && message info "Using find: ${FIND}"
 
 
 detect_clean_up_hooks

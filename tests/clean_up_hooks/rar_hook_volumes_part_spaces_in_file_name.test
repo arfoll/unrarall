@@ -1,0 +1,26 @@
+# REQUIRES: rar_binary
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a simple test file.
+# State block size in bytes because *BSD dd doesn't support `M` suffix.
+# RUN: dd if=/dev/zero of="`pwd`/data file" count=2 bs=1048576
+# RUN: test -f "data file"
+
+# Make the rar volumes.
+# NOTE: We use no compression here because the data is all zeros
+# which compresses really well and would result in no volumes being
+# produced.
+# RUN: %rar a -m0 -v512k "test thing.rar" "data file"
+# RUN: test -f "test thing.part"*1.rar
+# RUN: test -f "test thing.part"*2.rar
+# RUN: test -f "test thing.part"*3.rar
+# RUN: test -f "test thing.part"*4.rar
+# RUN: rm -f "data file"
+
+# Check the test file is extracted and rar files are removed
+# RUN: %unrarall --clean=rar .
+# RUN: test -f "data file"
+# RUN: test "$((%find . -type f -iname '*.rar' || echo '1') | wc -l)" -eq 0

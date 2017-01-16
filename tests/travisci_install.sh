@@ -7,9 +7,7 @@ if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
 
   # Install unrar, rar and 7z.
   brew install p7zip
-  # FIXME: This will likely break in the future.
-  # See: https://github.com/caskroom/homebrew-cask/issues/28611
-  brew install Homebrew/homebrew-binary/rar
+  brew cask install rar
 
   # Install python
   brew install python3

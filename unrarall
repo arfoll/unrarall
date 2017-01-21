@@ -771,7 +771,8 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
   filenameAbsolute="$(pwd)/${filename}"
 
   # Switch to a temporary directory so the extracted file does not clobber anything
-  tmp_dir=`mktemp -d -p . 2>/dev/null`
+  # some special handling here to support macos: http://unix.stackexchange.com/a/84980/210181
+  tmp_dir=`mktemp -d -p . 2>/dev/null || TMPDIR=$(pwd) mktemp -d -t 'unrarall'`
   if [ $? -ne 0 ] || [ -z ${tmp_dir} ] || [ ! -d "${tmp_dir}" ]; then
     message error "Failed to create a temporary directory to handle extraction"
     exit 1

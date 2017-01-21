@@ -38,12 +38,13 @@ declare -x UNRARALL_PASSWORD_FILE="${HOME}/.unrar_passwords" #If this exists and
 declare -ax UNRARALL_DETECTED_CLEAN_UP_HOOKS
 declare -ax UNRARALL_CLEAN_UP_HOOKS_TO_RUN=(none)
 declare -x UNRARALL_OUTPUT_DIR=""
+declare -x UNRARALL_DEPTH=8
 
 function usage()
 {
   echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean=<hook>[,<hook>] ] [ --force ] [ --full-path ]
                 [ --verbose | --quiet ] [--7zip | --backend=<backend> ] [--dry] [--disable-cksfv] [ --password-file <file> ]
-                [ --output DIRECTORY ] [ --find-binary <binary_path> ] <DIRECTORY>
+                [ --output DIRECTORY ] [ --find-binary <binary_path> ] [ --depth <amt> ] <DIRECTORY>
        ${UNRARALL_EXECUTABLE_NAME} --help
        ${UNRARALL_EXECUTABLE_NAME} --version
 
@@ -84,6 +85,8 @@ OPTIONS
                      screen
 -o, --output         Specify a directory to extract rar files. By default files
                      will be extracted in the directory containing the rar file.
+--depth              Maximum depth that nested rar files will be extracted. By
+                     default, is a depth of 8.
 --password-file      Specify path to password file.
                      Default \"${UNRARALL_PASSWORD_FILE}\".
 --backend            Force particular backend (unrar, rar, or 7z)
@@ -520,6 +523,19 @@ while [ -n "$1" ]; do
         # because we may be changing directory multiple times
         UNRARALL_OUTPUT_DIR="$(cd "${UNRARALL_OUTPUT_DIR}" ; pwd)"
       ;;
+      --depth)
+        shift
+        UNRARALL_DEPTH="$1"
+        case $UNRARALL_DEPTH in
+          ''|*[!0-9]*)
+            message error "\"${UNRARALL_DEPTH}\" is not a number"
+            exit 1
+           ;;
+          *)
+            message info "Using \"${UNRARALL_DEPTH}\" as as the maximum depth"
+          ;;
+        esac
+      ;;
       --password-file)
         shift
         if [ ! -e "$1" ]; then
@@ -754,14 +770,18 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
   # Compute fullpath to rar file
   filenameAbsolute="$(pwd)/${filename}"
 
-  # If user specified extraction directory change to it now
-  if [ -n "${UNRARALL_OUTPUT_DIR}" ]; then
-    cd "${UNRARALL_OUTPUT_DIR}"
-    if [ $? -ne 0 ]; then
-      message error "Failed to switch to output directory \"${UNRARALL_OUTPUT_DIR}\""
-      exit 1
-    fi
+  # Switch to a temporary directory so the extracted file does not clobber anything
+  tmp_dir=`mktemp -d -p . 2>/dev/null`
+  if [ $? -ne 0 ] || [ -z ${tmp_dir} ] || [ ! -d "${tmp_dir}" ]; then
+    message error "Failed to create a temporary directory to handle extraction"
+    exit 1
   fi
+  cd "${tmp_dir}"
+  if [ $? -ne 0 ]; then
+    message error "Failed to switch to tmp directory \"${tmp_dir}\""
+    exit 1
+  fi
+  tmp_dir=`pwd`
 
   # unrar file if SFV checked out or --force was given
   if [ "$SUCCESS" -eq 0 ] || [ "$FORCE" -eq 1 ]; then
@@ -804,6 +824,48 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
     let COUNT=COUNT-1
     let FAIL_COUNT=FAIL_COUNT+1
     [ "$FORCE" -eq 0 ] && message error "failed" || message error "failed (forced)"
+  fi
+
+  # Save the files extracted
+  files=( $(find_wrapper . -mindepth 1 -type f) )
+
+  # If user specified extraction directory change to it now
+  if [ -n "${UNRARALL_OUTPUT_DIR}" ]; then
+    cd "${UNRARALL_OUTPUT_DIR}"
+    if [ $? -ne 0 ]; then
+      message error "Failed to switch to output directory \"${UNRARALL_OUTPUT_DIR}\""
+      exit 1
+    fi
+  else
+    cd "${RARFILE_DIR}"
+    if [ $? -ne 0 ]; then
+      message error "Failed to switch to rar directory \"${RARFILE_DIR}\""
+      exit 1
+    fi
+  fi
+
+  # Move extracted files to cwd safely
+  for extracted_file in "${files[@]}"; do
+    mkdir -p "$(dirname ${extracted_file})"
+    if [ $? -ne 0 ]; then
+      message error "Unable to create directory structure for \"$(dirname ${extracted_file})\""
+      exit 1
+    fi
+    mv -b "${tmp_dir}/${extracted_file}" "${extracted_file}"
+    if [ $? -ne 0 ]; then
+      message error "Failed to move \"${extracted_file}\" to \"${RARFILE_DIR}\""
+      exit 1
+    fi
+  done
+
+  # Remove the tmp directory
+  if [ -d "${tmp_dir}" ]; then
+    find_wrapper "${tmp_dir}" -mindepth 1 -type d -empty -delete
+    rmdir "${tmp_dir}"
+    if [ $? -ne 0 ]; then
+      message error "Failed cleanup temporary directory \"${tmp_dir}\""
+      exit 1
+    fi
   fi
 
   #Perform clean up if necessary

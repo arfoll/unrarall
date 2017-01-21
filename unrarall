@@ -828,6 +828,8 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
 
   # Save the files extracted
   files=( $(find_wrapper . -mindepth 1 -type f) )
+  # Save the empty directories extracted
+  empty_directories=( $(find_wrapper . -mindepth 1 -type d -empty) )
 
   # If user specified extraction directory change to it now
   if [ -n "${UNRARALL_OUTPUT_DIR}" ]; then
@@ -854,6 +856,13 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
     mv -b "${tmp_dir}/${extracted_file}" "${extracted_file}"
     if [ $? -ne 0 ]; then
       message error "Failed to move \"${extracted_file}\" to \"${RARFILE_DIR}\""
+      exit 1
+    fi
+  done
+  for dir in "${empty_directories[@]}"; do
+    mkdir -p "${dir}"
+    if [ $? -ne 0 ]; then
+      message error "Unable to create directory structure for \"${dir}\""
       exit 1
     fi
   done

@@ -28,6 +28,7 @@ declare -ix FORCE=0
 declare -ix VERBOSE=0
 declare -ix QUIET=0
 declare -ix CKSFV=1
+declare -ix TRACK_EXTRACTED=0
 declare -x UNRAR_METHOD="e"
 declare -x CKSFV_FLAGS="-q -g"
 declare -x UNRARALL_BIN="" #Leave empty to let unrarall to loop through UNRAR_BINARIES, setting this will disable searching through UNRAR_BINARIES
@@ -478,6 +479,9 @@ while [ -n "$1" ]; do
       -s | --disable-cksfv )
         CKSFV=0
       ;;
+      --track-extracted )
+        TRACK_EXTRACTED=1
+      ;;
       --clean=*)
         index=0;
         for hook in $( echo "$1" | sed_wrapper 's/--clean=//' | tr , " ") ; do
@@ -751,6 +755,17 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
     fi
   fi
 
+  TRACKED_FILE=1
+  if [ "$TRACK_EXTRACTED" -eq 1 ]; then
+    # check if this rar has been extracted already
+    if [ -e ".unrar" ]; then
+      size=$(wc -c <"${filename}")
+      grep -q "${sfilename}=${size}" ".unrar"
+      SUCCESS=$?
+      TRACKED_FILE=$SUCCESS
+    fi
+  fi
+
   # Compute fullpath to rar file
   filenameAbsolute="$(pwd)/${filename}"
 
@@ -764,7 +779,11 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
   fi
 
   # unrar file if SFV checked out or --force was given
-  if [ "$SUCCESS" -eq 0 ] || [ "$FORCE" -eq 1 ]; then
+  SHOULD_EXTRACT=$SUCCESS
+  if [ "$SUCCESS" -eq 0 ] && [ "$TRACK_EXTRACTED" -eq 1 ] && [ "$TRACKED_FILE" -eq 0 ]; then
+      SHOULD_EXTRACT=1
+  fi
+  if [ "$SHOULD_EXTRACT" -eq 0 ] || [ "$FORCE" -eq 1 ]; then
     message nnl "Extracting (${UNRAR_METHOD}) \"$file\"..."
     file_encrypted=$(isRarEncrypted ${UNRARALL_BIN} ${filenameAbsolute})
     if [ "${file_encrypted}" -eq 0 ]; then
@@ -796,7 +815,9 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
     fi
   fi
   # if fail remove from count
-  if [ "$SUCCESS" -eq 0 ] && [ "$FORCE" -eq 0 ] ; then
+  if [ "$SUCCESS" -eq 0 ] && [ "$TRACK_EXTRACTED" -eq 1 ] && [ "$TRACKED_FILE" -eq 0 ]; then
+      message ok "Already extracted (skipped)";
+  elif [ "$SUCCESS" -eq 0 ] && [ "$FORCE" -eq 0 ] ; then
     message ok "ok";
   elif [ "$SUCCESS" -eq 0 ] && [ "$FORCE" -eq 1 ] ; then
     message ok "ok (forced)";
@@ -804,6 +825,12 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
     let COUNT=COUNT-1
     let FAIL_COUNT=FAIL_COUNT+1
     [ "$FORCE" -eq 0 ] && message error "failed" || message error "failed (forced)"
+  fi
+ 
+  if [ "$SUCCESS" -eq 0 ] && [ "$TRACK_EXTRACTED" -eq 1 ] && [ "$TRACKED_FILE" -eq 1 ] ; then
+    # save the successful extraction
+     size=$(wc -c <"${filename}")
+     echo "${sfilename}=${size}" >> ".unrar"
   fi
 
   #Perform clean up if necessary

@@ -38,7 +38,10 @@ declare -x UNRARALL_PASSWORD_FILE="${HOME}/.unrar_passwords" #If this exists and
 declare -ax UNRARALL_DETECTED_CLEAN_UP_HOOKS
 declare -ax UNRARALL_CLEAN_UP_HOOKS_TO_RUN=(none)
 declare -x UNRARALL_OUTPUT_DIR=""
-declare -x UNRARALL_DEPTH=8
+declare -ix UNRARALL_DEPTH=8
+declare -ix MV_BACKUP=0 # 0 -> we can use mv -b, 1 -> resort to shenanigans to not clobber when moving
+`mv --help | grep  "\-\-backup" 2>&1 >/dev/null`
+MV_BACKUP=$?
 
 function usage()
 {
@@ -434,6 +437,20 @@ function unrarall_clean_empty_folders()
       message error "Could not execute empty_folders hook"
     ;;
   esac
+}
+
+function safe_move()
+{
+  if [ "$MV_BACKUP" -eq 0 ]; then
+    mv -b "${1}" "${2}"
+  else
+    mv -n "${1}" "${2}"
+    FILE_COUNT=1
+    while [ -e "${1}" ]; do
+      mv -n "${1}" "${2}.${FILE_COUNT}"
+      let FILE_COUNT=FILE_COUNT+1
+    done
+  fi
 }
 
 #end of clean-up hooks
@@ -854,7 +871,7 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
       message error "Unable to create directory structure for \"$(dirname ${extracted_file})\""
       exit 1
     fi
-    mv -b "${tmp_dir}/${extracted_file}" "${extracted_file}"
+    safe_move "${tmp_dir}/${extracted_file}" "${extracted_file}"
     if [ $? -ne 0 ]; then
       message error "Failed to move \"${extracted_file}\" to \"${RARFILE_DIR}\""
       exit 1

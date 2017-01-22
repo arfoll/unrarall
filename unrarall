@@ -438,6 +438,7 @@ function unrarall_clean_empty_folders()
     ;;
   esac
 }
+#end of clean-up hooks
 
 function safe_move()
 {
@@ -452,8 +453,6 @@ function safe_move()
     done
   fi
 }
-
-#end of clean-up hooks
 
 # Detect the version of sed available and create a wrapper function
 # that will behave like sed using "extended regular expressions"
@@ -479,8 +478,17 @@ if [ "$#" -lt 1 ]; then
   exit 1;
 fi
 
+# Save a copy of the original cmd + args
+UNRARALL_CMD="${0}"
+
 while [ -n "$1" ]; do
   if [ $# -gt 1 ] || [ $( echo "$1" | grep -Ec '^(-h|--help|--version)$' ) -eq 1 ] ; then
+
+    # save all the args passed to the cmd, except for --depth
+    if [ "${1}" != "--depth" ]; then
+      UNRARALL_CMD="${UNRARALL_CMD} ${1}"
+    fi
+
     #Handle optional arguments
     case "$1" in
       -h | --help )
@@ -528,6 +536,7 @@ while [ -n "$1" ]; do
       ;;
       -o | --output)
         shift
+        UNRARALL_CMD="${UNRARALL_CMD} ${1}"
         UNRARALL_OUTPUT_DIR="$1"
         if [ ! -d "${UNRARALL_OUTPUT_DIR}" ]; then
           message error "\"${UNRARALL_OUTPUT_DIR}\" is not a directory"
@@ -555,6 +564,7 @@ while [ -n "$1" ]; do
       ;;
       --password-file)
         shift
+        UNRARALL_CMD="${UNRARALL_CMD} ${1}"
         if [ ! -e "$1" ]; then
           message error "\"$1\" does not exist."
           exit 1
@@ -591,6 +601,7 @@ while [ -n "$1" ]; do
       ;;
       --find-binary)
         shift
+        UNRARALL_CMD="${UNRARALL_CMD} ${1}"
         FIND="${1}"
       ;;
       *)
@@ -842,6 +853,13 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
     let COUNT=COUNT-1
     let FAIL_COUNT=FAIL_COUNT+1
     [ "$FORCE" -eq 0 ] && message error "failed" || message error "failed (forced)"
+  fi
+
+  # Check if any recursive extraction is needed
+  if [ "${UNRARALL_DEPTH}" -gt 0 ] && [[ -n `find_wrapper . -depth -iregex '.*\.(rar|001)$'` ]]; then
+    [ $VERBOSE -eq 1 ] && message ok "Detected rar archives inside of \"$file\", recursively extracting"
+    let NEW_DEPTH=UNRARALL_DEPTH-1
+    eval $UNRARALL_CMD --depth $NEW_DEPTH ${tmp_dir}
   fi
 
   # Save the files extracted

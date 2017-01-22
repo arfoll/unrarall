@@ -512,7 +512,9 @@ if [ "$#" -lt 1 ]; then
 fi
 
 # Save a copy of the original cmd + args
-UNRARALL_CMD="${BASH_SOURCE[0]}"
+SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+SCRIPT_NAME=`basename "${BASH_SOURCE[0]}"`
+UNRARALL_CMD="$SCRIPT_DIR/$SCRIPT_NAME"
 
 while [ -n "$1" ]; do
   if [ $# -gt 1 ] || [ $( echo "$1" | grep -Ec '^(-h|--help|--version)$' ) -eq 1 ] ; then

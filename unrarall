@@ -38,7 +38,7 @@ declare -x UNRARALL_PASSWORD_FILE="${HOME}/.unrar_passwords" #If this exists and
 declare -ax UNRARALL_DETECTED_CLEAN_UP_HOOKS
 declare -ax UNRARALL_CLEAN_UP_HOOKS_TO_RUN=(none)
 declare -x UNRARALL_OUTPUT_DIR=""
-declare -ix DEPTH=8
+declare -ix DEPTH=4
 declare -ix SKIP_IF_EXISTS=0
 declare -ix MV_BACKUP=0 # 0 -> we can use mv -b, 1 -> resort to shenanigans to not clobber when moving
 `mv --help | grep  "\-\-backup" 2>&1 >/dev/null`
@@ -90,7 +90,7 @@ OPTIONS
 -o, --output         Specify a directory to extract rar files. By default files
                      will be extracted in the directory containing the rar file.
 --depth              Maximum depth that nested rar files will be extracted. By
-                     default, is a depth of 8.
+                     default, is a depth of 4.
 --skip-if-exists     Skip extraction of archive if all files already exists.
                      Note: files are only checked by name, not by contents!
 --password-file      Specify path to password file.
@@ -512,7 +512,7 @@ if [ "$#" -lt 1 ]; then
 fi
 
 # Save a copy of the original cmd + args
-UNRARALL_CMD="${0}"
+UNRARALL_CMD="${BASH_SOURCE[0]}"
 
 while [ -n "$1" ]; do
   if [ $# -gt 1 ] || [ $( echo "$1" | grep -Ec '^(-h|--help|--version)$' ) -eq 1 ] ; then

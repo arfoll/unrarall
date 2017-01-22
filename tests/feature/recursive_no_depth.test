@@ -1,0 +1,28 @@
+# REQUIRES: rar_binary
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a simple test file and put it in a simple rar file
+# RUN: echo "Test file" > test_file
+# RUN: %rar a test.rar test_file
+# RUN: test -f test.rar
+# RUN: rm test_file
+
+# Make make a second rar file containing the first rar file
+# RUN: %rar a second_archive.rar test.rar
+# RUN: test -f second_archive.rar
+# RUN: rm test.rar
+
+# Make make a third rar file containing the second rar file
+# RUN: %rar a third_archive.rar second_archive.rar
+# RUN: test -f third_archive.rar
+# RUN: rm second_archive.rar
+
+# Check the test file is not extracted and the inner rar remains
+# RUN: %unrarall --depth 0 .
+# RUN: test ! -f test_file
+# RUN: test ! -f test.rar
+# RUN: test -f second_archive.rar
+# RUN: test -f third_archive.rar

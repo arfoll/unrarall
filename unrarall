@@ -92,7 +92,7 @@ OPTIONS
 --depth              Maximum depth that nested rar files will be extracted. By
                      default, is a depth of 8.
 --skip-if-exists     Skip extraction of archive if all files already exists.
-                     Note: files are only checked by name, not by matching contents
+                     Note: files are only checked by name, not by contents!
 --password-file      Specify path to password file.
                      Default \"${UNRARALL_PASSWORD_FILE}\".
 --backend            Force particular backend (unrar, rar, or 7z)
@@ -889,6 +889,18 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
       fi
     fi
   fi
+
+  # Check if any recursive extraction is needed
+  if [ "$SUCCESS" -eq 0 ] && [ "${DEPTH}" -gt 0 ] && [[ -n `find_wrapper . -depth -iregex '.*\.(rar|001)$'` ]]; then
+    [ $VERBOSE -eq 1 ] && message ok "Detected rar archives inside of \"$file\", recursively extracting"
+    let NEW_DEPTH=DEPTH-1
+    eval $UNRARALL_CMD --depth $NEW_DEPTH ${tmp_dir}
+    if [ $? -ne 0 ]; then
+      message error "Failed to recursively extract \"${filenameAbsolute}\""
+      SUCCESS=1
+    fi
+  fi
+
   # if fail remove from count
   if [ "$SUCCESS" -eq 0 ] && [ "$FORCE" -eq 0 ] ; then
     message ok "ok";
@@ -898,13 +910,6 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
     let COUNT=COUNT-1
     let FAIL_COUNT=FAIL_COUNT+1
     [ "$FORCE" -eq 0 ] && message error "failed" || message error "failed (forced)"
-  fi
-
-  # Check if any recursive extraction is needed
-  if [ "${DEPTH}" -gt 0 ] && [[ -n `find_wrapper . -depth -iregex '.*\.(rar|001)$'` ]]; then
-    [ $VERBOSE -eq 1 ] && message ok "Detected rar archives inside of \"$file\", recursively extracting"
-    let NEW_DEPTH=DEPTH-1
-    eval $UNRARALL_CMD --depth $NEW_DEPTH ${tmp_dir}
   fi
 
   # Save the files extracted

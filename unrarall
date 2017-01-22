@@ -38,7 +38,8 @@ declare -x UNRARALL_PASSWORD_FILE="${HOME}/.unrar_passwords" #If this exists and
 declare -ax UNRARALL_DETECTED_CLEAN_UP_HOOKS
 declare -ax UNRARALL_CLEAN_UP_HOOKS_TO_RUN=(none)
 declare -x UNRARALL_OUTPUT_DIR=""
-declare -ix UNRARALL_DEPTH=8
+declare -ix DEPTH=8
+declare -ix SKIP_IF_EXISTS=0
 declare -ix MV_BACKUP=0 # 0 -> we can use mv -b, 1 -> resort to shenanigans to not clobber when moving
 `mv --help | grep  "\-\-backup" 2>&1 >/dev/null`
 MV_BACKUP=$?
@@ -47,7 +48,7 @@ function usage()
 {
   echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean=<hook>[,<hook>] ] [ --force ] [ --full-path ]
                 [ --verbose | --quiet ] [--7zip | --backend=<backend> ] [--dry] [--disable-cksfv] [ --password-file <file> ]
-                [ --output DIRECTORY ] [ --find-binary <binary_path> ] [ --depth <amt> ] <DIRECTORY>
+                [ --output DIRECTORY ] [ --find-binary <binary_path> ] [ --depth <amt> ] [--skip-if-exists] <DIRECTORY>
        ${UNRARALL_EXECUTABLE_NAME} --help
        ${UNRARALL_EXECUTABLE_NAME} --version
 
@@ -90,6 +91,8 @@ OPTIONS
                      will be extracted in the directory containing the rar file.
 --depth              Maximum depth that nested rar files will be extracted. By
                      default, is a depth of 8.
+--skip-if-exists     Skip extraction of archive if all files already exists.
+                     Note: files are only checked by name, not by matching contents
 --password-file      Specify path to password file.
                      Default \"${UNRARALL_PASSWORD_FILE}\".
 --backend            Force particular backend (unrar, rar, or 7z)
@@ -174,6 +177,36 @@ function getUnrarFlags()
       exit 1;
     ;;
   esac
+}
+
+#function to check if an archive has been extracted already
+function isAlreadyExtracted()
+{
+  case "$1" in
+    unrar)
+      file_listing_cmd="unrar lb \"$2\""
+    ;;
+    7z)
+      file_listing_cmd="7z l \"$2\" | sed -n -e '/-------------------/,/-------------------/ p' | sed '1d;\$d' | awk '{out=\$6; for(i=7;i<=NF;i++){out=out\" \"\$i}; print out}'"
+    ;;
+    rar)
+      file_listing_cmd="rar lb \"$2\""
+    ;;
+    echo)
+      return 1
+    ;;
+    *)
+      message info "Unable to determine if \"$2\" was already extracted with \"$1\"."
+      message info "Assuming \"$2\" has never been extracted."
+      return 1
+    ;;
+  esac
+  for rar_file in $(eval $file_listing_cmd); do
+    if [ ! -e $rar_file ]; then
+      return 1
+    fi
+  done
+  return 0
 }
 
 #function to check if file is password protected
@@ -551,16 +584,19 @@ while [ -n "$1" ]; do
       ;;
       --depth)
         shift
-        UNRARALL_DEPTH="$1"
-        case $UNRARALL_DEPTH in
+        DEPTH="$1"
+        case $DEPTH in
           ''|*[!0-9]*)
-            message error "\"${UNRARALL_DEPTH}\" is not a number"
+            message error "\"${DEPTH}\" is not a number"
             exit 1
            ;;
           *)
-            message info "Using \"${UNRARALL_DEPTH}\" as as the maximum depth"
+            message info "Using \"${DEPTH}\" as as the maximum depth"
           ;;
         esac
+      ;;
+      --skip-if-exists)
+        SKIP_IF_EXISTS=1
       ;;
       --password-file)
         shift
@@ -798,6 +834,15 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
   # Compute fullpath to rar file
   filenameAbsolute="$(pwd)/${filename}"
 
+  # Check if file is extracted
+  if [ "$SKIP_IF_EXISTS" -eq 1 ] && [ "$SUCCESS" -eq 0 ] && [ "$FORCE" -eq 0 ]; then
+    isAlreadyExtracted ${UNRARALL_BIN} ${filenameAbsolute}
+    if [ "$?" -eq 0 ]; then
+      message ok "File \"${filenameAbsolute}\" appears to have already been extracted, skipping..."
+      continue
+    fi
+  fi
+
   # Switch to a temporary directory so the extracted file does not clobber anything
   # some special handling here to support macos: http://unix.stackexchange.com/a/84980/210181
   tmp_dir=`mktemp -d -p . 2>/dev/null || TMPDIR=$(pwd) mktemp -d -t 'unrarall'`
@@ -856,9 +901,9 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
   fi
 
   # Check if any recursive extraction is needed
-  if [ "${UNRARALL_DEPTH}" -gt 0 ] && [[ -n `find_wrapper . -depth -iregex '.*\.(rar|001)$'` ]]; then
+  if [ "${DEPTH}" -gt 0 ] && [[ -n `find_wrapper . -depth -iregex '.*\.(rar|001)$'` ]]; then
     [ $VERBOSE -eq 1 ] && message ok "Detected rar archives inside of \"$file\", recursively extracting"
-    let NEW_DEPTH=UNRARALL_DEPTH-1
+    let NEW_DEPTH=DEPTH-1
     eval $UNRARALL_CMD --depth $NEW_DEPTH ${tmp_dir}
   fi
 

@@ -1,0 +1,31 @@
+# REQUIRES: rar_binary
+# REQUIRES: unrar_backend
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a set of test files and put it in a rar archive
+# RUN: echo "Test file" > test_file
+# RUN: echo "Whitespace test file" > "whitespace file"
+# RUN: %rar a test.rar test_file "whitespace file"
+# RUN: test -f test.rar
+
+# Check that unrarall returns a normal exit code if the files exist
+# RUN: %unrarall --backend=unrar --skip-if-exists .
+
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a set of test files and put it in a rar archive, remove one file
+# RUN: echo "Test file" > test_file
+# RUN: echo "Whitespace test file" > "whitespace file"
+# RUN: %rar a test.rar test_file "whitespace file"
+# RUN: test -f test.rar
+# RUN: rm test_file
+
+# Check that unrarall returns a normal exit code
+# RUN: %unrarall --backend=unrar --skip-if-exists .
+# RUN: test -f test_file

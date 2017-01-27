@@ -12,7 +12,7 @@
 # RUN: test -f test.rar
 
 # Check that unrarall returns a normal exit code if the files exist
-# RUN: %unrarall --backend=rar --skip-if-exists .
+# RUN: %unrarall --skip-if-exists .
 
 # Remove old temporary working directory
 # RUN: rm -rf %t
@@ -27,5 +27,5 @@
 # RUN: rm test_file
 
 # Check that unrarall returns a normal exit code
-# RUN: %unrarall --backend=rar --skip-if-exists .
+# RUN: %unrarall --skip-if-exists .
 # RUN: test -f test_file

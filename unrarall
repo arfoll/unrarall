@@ -38,12 +38,17 @@ declare -x UNRARALL_PASSWORD_FILE="${HOME}/.unrar_passwords" #If this exists and
 declare -ax UNRARALL_DETECTED_CLEAN_UP_HOOKS
 declare -ax UNRARALL_CLEAN_UP_HOOKS_TO_RUN=(none)
 declare -x UNRARALL_OUTPUT_DIR=""
+declare -ix DEPTH=4
+declare -ix SKIP_IF_EXISTS=0
+declare -ix MV_BACKUP=0 # 0 -> we can use mv -b, 1 -> resort to shenanigans to not clobber when moving
+`mv --help | grep  "\-\-backup" 2>&1 >/dev/null`
+MV_BACKUP=$?
 
 function usage()
 {
   echo "Usage: ${UNRARALL_EXECUTABLE_NAME} [ --clean=<hook>[,<hook>] ] [ --force ] [ --full-path ]
                 [ --verbose | --quiet ] [--7zip | --backend=<backend> ] [--dry] [--disable-cksfv] [ --password-file <file> ]
-                [ --output DIRECTORY ] [ --find-binary <binary_path> ] <DIRECTORY>
+                [ --output DIRECTORY ] [ --find-binary <binary_path> ] [ --depth <amt> ] [--skip-if-exists] <DIRECTORY>
        ${UNRARALL_EXECUTABLE_NAME} --help
        ${UNRARALL_EXECUTABLE_NAME} --version
 
@@ -84,6 +89,10 @@ OPTIONS
                      screen
 -o, --output         Specify a directory to extract rar files. By default files
                      will be extracted in the directory containing the rar file.
+--depth              Maximum depth that nested rar files will be extracted. By
+                     default, is a depth of 4.
+--skip-if-exists     Skip extraction of archive if all files already exists.
+                     Note: files are only checked by name, not by contents!
 --password-file      Specify path to password file.
                      Default \"${UNRARALL_PASSWORD_FILE}\".
 --backend            Force particular backend (unrar, rar, or 7z)
@@ -168,6 +177,36 @@ function getUnrarFlags()
       exit 1;
     ;;
   esac
+}
+
+#function to check if an archive has been extracted already
+function isAlreadyExtracted()
+{
+  case "$1" in
+    unrar)
+      file_listing_cmd="unrar lb \"$2\""
+    ;;
+    7z)
+      file_listing_cmd="7z l \"$2\" | sed -n -e '/-------------------/,/-------------------/ p' | sed '1d;\$d' | awk '{out=\$6; for(i=7;i<=NF;i++){out=out\" \"\$i}; print out}'"
+    ;;
+    rar)
+      file_listing_cmd="rar lb \"$2\""
+    ;;
+    echo)
+      return 1
+    ;;
+    *)
+      message info "Unable to determine if \"$2\" was already extracted with \"$1\"."
+      message info "Assuming \"$2\" has never been extracted."
+      return 1
+    ;;
+  esac
+  for rar_file in $(eval $file_listing_cmd); do
+    if [ ! -e $rar_file ]; then
+      return 1
+    fi
+  done
+  return 0
 }
 
 #function to check if file is password protected
@@ -432,8 +471,21 @@ function unrarall_clean_empty_folders()
     ;;
   esac
 }
-
 #end of clean-up hooks
+
+function safe_move()
+{
+  if [ "$MV_BACKUP" -eq 0 ]; then
+    mv -b "${1}" "${2}"
+  else
+    mv -n "${1}" "${2}"
+    FILE_COUNT=1
+    while [ -e "${1}" ]; do
+      mv -n "${1}" "${2}.${FILE_COUNT}"
+      let FILE_COUNT=FILE_COUNT+1
+    done
+  fi
+}
 
 # Detect the version of sed available and create a wrapper function
 # that will behave like sed using "extended regular expressions"
@@ -459,8 +511,19 @@ if [ "$#" -lt 1 ]; then
   exit 1;
 fi
 
+# Save a copy of the original cmd + args
+SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+SCRIPT_NAME=`basename "${BASH_SOURCE[0]}"`
+UNRARALL_CMD="$SCRIPT_DIR/$SCRIPT_NAME"
+
 while [ -n "$1" ]; do
   if [ $# -gt 1 ] || [ $( echo "$1" | grep -Ec '^(-h|--help|--version)$' ) -eq 1 ] ; then
+
+    # save all the args passed to the cmd, except for --depth
+    if [ "${1}" != "--depth" ]; then
+      UNRARALL_CMD="${UNRARALL_CMD} ${1}"
+    fi
+
     #Handle optional arguments
     case "$1" in
       -h | --help )
@@ -508,6 +571,7 @@ while [ -n "$1" ]; do
       ;;
       -o | --output)
         shift
+        UNRARALL_CMD="${UNRARALL_CMD} ${1}"
         UNRARALL_OUTPUT_DIR="$1"
         if [ ! -d "${UNRARALL_OUTPUT_DIR}" ]; then
           message error "\"${UNRARALL_OUTPUT_DIR}\" is not a directory"
@@ -520,8 +584,25 @@ while [ -n "$1" ]; do
         # because we may be changing directory multiple times
         UNRARALL_OUTPUT_DIR="$(cd "${UNRARALL_OUTPUT_DIR}" ; pwd)"
       ;;
+      --depth)
+        shift
+        DEPTH="$1"
+        case $DEPTH in
+          ''|*[!0-9]*)
+            message error "\"${DEPTH}\" is not a number"
+            exit 1
+           ;;
+          *)
+            message info "Using \"${DEPTH}\" as as the maximum depth"
+          ;;
+        esac
+      ;;
+      --skip-if-exists)
+        SKIP_IF_EXISTS=1
+      ;;
       --password-file)
         shift
+        UNRARALL_CMD="${UNRARALL_CMD} ${1}"
         if [ ! -e "$1" ]; then
           message error "\"$1\" does not exist."
           exit 1
@@ -558,6 +639,7 @@ while [ -n "$1" ]; do
       ;;
       --find-binary)
         shift
+        UNRARALL_CMD="${UNRARALL_CMD} ${1}"
         FIND="${1}"
       ;;
       *)
@@ -754,14 +836,28 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
   # Compute fullpath to rar file
   filenameAbsolute="$(pwd)/${filename}"
 
-  # If user specified extraction directory change to it now
-  if [ -n "${UNRARALL_OUTPUT_DIR}" ]; then
-    cd "${UNRARALL_OUTPUT_DIR}"
-    if [ $? -ne 0 ]; then
-      message error "Failed to switch to output directory \"${UNRARALL_OUTPUT_DIR}\""
-      exit 1
+  # Check if file is extracted
+  if [ "$SKIP_IF_EXISTS" -eq 1 ] && [ "$SUCCESS" -eq 0 ] && [ "$FORCE" -eq 0 ]; then
+    isAlreadyExtracted ${UNRARALL_BIN} ${filenameAbsolute}
+    if [ "$?" -eq 0 ]; then
+      message ok "File \"${filenameAbsolute}\" appears to have already been extracted, skipping..."
+      continue
     fi
   fi
+
+  # Switch to a temporary directory so the extracted file does not clobber anything
+  # some special handling here to support macos: http://unix.stackexchange.com/a/84980/210181
+  tmp_dir=`mktemp -d -p . 2>/dev/null || TMPDIR=$(pwd) mktemp -d -t 'unrarall'`
+  if [ $? -ne 0 ] || [ -z ${tmp_dir} ] || [ ! -d "${tmp_dir}" ]; then
+    message error "Failed to create a temporary directory to handle extraction"
+    exit 1
+  fi
+  cd "${tmp_dir}"
+  if [ $? -ne 0 ]; then
+    message error "Failed to switch to tmp directory \"${tmp_dir}\""
+    exit 1
+  fi
+  tmp_dir=`pwd`
 
   # unrar file if SFV checked out or --force was given
   if [ "$SUCCESS" -eq 0 ] || [ "$FORCE" -eq 1 ]; then
@@ -795,6 +891,18 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
       fi
     fi
   fi
+
+  # Check if any recursive extraction is needed
+  if [ "$SUCCESS" -eq 0 ] && [ "${DEPTH}" -gt 0 ] && [[ -n `find_wrapper . -depth -iregex '.*\.(rar|001)$'` ]]; then
+    [ $VERBOSE -eq 1 ] && message ok "Detected rar archives inside of \"$file\", recursively extracting"
+    let NEW_DEPTH=DEPTH-1
+    eval $UNRARALL_CMD --depth $NEW_DEPTH ${tmp_dir}
+    if [ $? -ne 0 ]; then
+      message error "Failed to recursively extract \"${filenameAbsolute}\""
+      SUCCESS=1
+    fi
+  fi
+
   # if fail remove from count
   if [ "$SUCCESS" -eq 0 ] && [ "$FORCE" -eq 0 ] ; then
     message ok "ok";
@@ -804,6 +912,57 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
     let COUNT=COUNT-1
     let FAIL_COUNT=FAIL_COUNT+1
     [ "$FORCE" -eq 0 ] && message error "failed" || message error "failed (forced)"
+  fi
+
+  # Save the files extracted
+  files=( $(find_wrapper . -mindepth 1 -type f) )
+  # Save the empty directories extracted
+  empty_directories=( $(find_wrapper . -mindepth 1 -type d -empty) )
+
+  # If user specified extraction directory change to it now
+  if [ -n "${UNRARALL_OUTPUT_DIR}" ]; then
+    cd "${UNRARALL_OUTPUT_DIR}"
+    if [ $? -ne 0 ]; then
+      message error "Failed to switch to output directory \"${UNRARALL_OUTPUT_DIR}\""
+      exit 1
+    fi
+  else
+    cd "${RARFILE_DIR}"
+    if [ $? -ne 0 ]; then
+      message error "Failed to switch to rar directory \"${RARFILE_DIR}\""
+      exit 1
+    fi
+  fi
+
+  # Move extracted files to cwd safely
+  for extracted_file in "${files[@]}"; do
+    mkdir -p "$(dirname ${extracted_file})"
+    if [ $? -ne 0 ]; then
+      message error "Unable to create directory structure for \"$(dirname ${extracted_file})\""
+      exit 1
+    fi
+    safe_move "${tmp_dir}/${extracted_file}" "${extracted_file}"
+    if [ $? -ne 0 ]; then
+      message error "Failed to move \"${extracted_file}\" to \"${RARFILE_DIR}\""
+      exit 1
+    fi
+  done
+  for dir in "${empty_directories[@]}"; do
+    mkdir -p "${dir}"
+    if [ $? -ne 0 ]; then
+      message error "Unable to create directory structure for \"${dir}\""
+      exit 1
+    fi
+  done
+
+  # Remove the tmp directory
+  if [ -d "${tmp_dir}" ]; then
+    find_wrapper "${tmp_dir}" -mindepth 1 -type d -empty -delete
+    rmdir "${tmp_dir}"
+    if [ $? -ne 0 ]; then
+      message error "Failed cleanup temporary directory \"${tmp_dir}\""
+      exit 1
+    fi
   fi
 
   #Perform clean up if necessary

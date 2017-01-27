@@ -1,0 +1,19 @@
+# REQUIRES: rar_binary
+# REQUIRES: rar_backend
+# Remove old temporary working directory
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: cd %t
+
+# Make a 10MB file and put it in a 3.5M rar multipart archives
+# RUN: dd if=/dev/urandom of=test.img bs=1024k count=10
+# RUN: %rar a -v3500k test.rar test.img
+# RUN: test -f test.part1.rar
+# RUN: test -f test.part2.rar
+# RUN: test -f test.part3.rar
+# RUN: rm test.img
+# RUN: echo "test data" > test.img
+
+# Check the test file is not extracted
+# RUN: %unrarall --skip-if-exists .
+# RUN: grep "test data" test.img

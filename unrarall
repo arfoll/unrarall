@@ -68,7 +68,7 @@ OPTIONS
 -d, --dry            Dry run of unrar and cleaning. No action will actually be
                      performed.
 --allow-failures     If there were any successful extractions, ignore errors and
-                     exit with code 0..
+                     exit with code 0.
 -s, --disable-cksfv  Use cksfv (if present) to check the CRC of the downloaded
                      files (if present) before extracting
 --clean=             Clean if unrar extraction succeeds (use --force to override).

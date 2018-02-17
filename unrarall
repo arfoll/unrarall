@@ -28,6 +28,7 @@ declare -ix FORCE=0
 declare -ix VERBOSE=0
 declare -ix QUIET=0
 declare -ix CKSFV=1
+declare -ix ALLOW_FAILURES=0
 declare -x UNRAR_METHOD="e"
 declare -x CKSFV_FLAGS="-q -g"
 declare -x UNRARALL_BIN="" #Leave empty to let unrarall to loop through UNRAR_BINARIES, setting this will disable searching through UNRAR_BINARIES
@@ -71,6 +72,8 @@ OPTIONS
                      program to extract the rar files.
 -d, --dry            Dry run of unrar and cleaning. No action will actually be
                      performed.
+--allow-failures     If there were any successful extractions, ignore errors and
+                     exit with code 0.
 -s, --disable-cksfv  Use cksfv (if present) to check the CRC of the downloaded
                      files (if present) before extracting
 --clean=             Clean if unrar extraction succeeds (use --force to override).
@@ -537,6 +540,9 @@ while [ -n "$1" ]; do
       -d | --dry )
         UNRARALL_BIN=echo
         RM="echo"
+      ;;
+      --allow-failures )
+        ALLOW_FAILURES=1
       ;;
       -s | --disable-cksfv )
         CKSFV=0
@@ -1008,5 +1014,13 @@ if [ "$FAIL_COUNT" -ne 0 ]; then
   if [ "$QUIET" -ne 1 ]; then
     message error "${FAIL_COUNT} failure(s)"
   fi
-  exit 1
+  if [ "$ALLOW_FAILURES" -eq 0 ]; then
+    exit 1
+  else
+    if [ "$COUNT" -eq 0 ]; then
+      exit 1
+    else
+      message info "${COUNT} success(es)"
+    fi
+  fi
 fi

@@ -4,16 +4,18 @@ matrix:
       dist: trusty
       # TravisCI doesn't support testing bash versions so
       # just pretend we are testing a python project
-      language: python
-      python: 3.5
+      language: generic
       sudo: required
+      services: docker
+      before_install: docker pull ubuntu:16.04
+      before_script: docker build .
     - os: osx
       # FIXME: Workaround lack of python support
       # on TravisCI osx builders.
       # https://github.com/travis-ci/travis-ci/issues/2312
       language: generic
       sudo: required
-install:
-  - tests/travisci_install.sh
-script:
-  - tests/run.sh
+      install:
+        - tests/travisci_install.sh
+      script:
+        - tests/run.sh

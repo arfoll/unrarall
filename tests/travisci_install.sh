@@ -13,8 +13,8 @@ if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
   brew install python3
   pip3 install lit==0.5.0 OutputCheck==0.4.1
 else
-  # Assume Ubuntu
-  sudo apt-get install cfv cksfv p7zip-full p7zip-rar unrar rar
+  # Assume Ubuntu & python3
+  sudo apt-get install python3-pip cfv cksfv p7zip-full p7zip-rar unrar rar
   # Note do not do `sudo pip` due to TravisCI using virtualenv
   pip install lit==0.5.0 OutputCheck==0.4.1
 fi

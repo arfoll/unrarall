@@ -187,7 +187,7 @@ function isAlreadyExtracted()
       file_listing_cmd="unrar lb \"$2\""
     ;;
     7z)
-      file_listing_cmd="7z l \"$2\" | sed -n -e '/-------------------/,/-------------------/ p' | sed '1d;\$d' | awk '{out=\$6; for(i=7;i<=NF;i++){out=out\" \"\$i}; print out}'"
+      file_listing_cmd="7z L -ba -slt \"$2\" | grep Path | cut -d '=' -f 2"
     ;;
     rar)
       file_listing_cmd="rar lb \"$2\""

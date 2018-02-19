@@ -13,7 +13,8 @@
 # NOTE: We use no compression here because the data is all zeros
 # which compresses really well and would result in no volumes being
 # produced.
-# RUN: %rar a -m0 -vn -v512k test.rar data
+# NOTE: Use rar v4 as v5 does not support custom suffixes
+# RUN: %rar a -ma4 -m0 -vn -v512k test.rar data
 # RUN: test -f test.rar
 # RUN: test -f test.r00
 # RUN: test -f test.r01

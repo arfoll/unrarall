@@ -2,30 +2,76 @@ UNRARALL - hacking document
 
 == RAR format ==
 
-This document describes the RAR file fomart as understood by unrarall. We only worry about RAR 2.x and newer.
+This document describes the RAR file fomart as understood by unrarall. We only
+worry about RAR 2.x and newer.
 
-RAR archives are specified by the 'Rar!' signature (since 1.5) as can be seen by running "head -1 file.rar | cut -c 1-4". Unrarall does not yet check for valid rar archives but could do in the near future.
+RAR archives are specified by the 'Rar!' signature (since 1.5) as can be seen
+by running "head -1 file.rar | cut -c 1-4". Unrarall does not yet check for
+valid rar archives but could do in the near future.
 
-RAR archives before 3.x used the naming format .[r-z][0-9][0-9]. This was probably done for DOS, however RAR 3.x moved to using the more sensible part[0-9][0-9][0-9].rar format. It is unclear whether 3 digits is the maximum or whether it really is part[0-9]+.rar. For the sake of unrarall we assume the latter.
+RAR archives before 3.x used the naming format .[r-z][0-9][0-9]. This was
+probably done for DOS, however RAR 3.x moved to using the more sensible
+part[0-9][0-9][0-9].rar format. It is unclear whether 3 digits is the maximum
+or whether it really is part[0-9]+.rar. For the sake of unrarall we assume the
+latter. Note that RAR 5.x removed metadata compatibility for the old
+.[r-z][0-9][0-9] (rar -vn mode, see rar man page for details).
+
+== Running tests ==
+
+To run the lit tests you'll need rar & python3 and then install lit &
+outputcheck from pip. You'll also need cksfv, p7zip-rar & unrar (all aren't
+needed but to run all tests you will need these). Below are some hints at what
+you'll need.
+
+```
+$ sudo apt-get install python3-pip cfv cksfv p7zip-full p7zip-rar unrar rar
+$ pip install lit OutputCheck
+```
+
+Then from the tests/ folder you can run the test suite:
+```
+$ ./run.sh
+```
+
+Or run the tests in part manually with lit, you have to specifiy a backend, the
+script runs the tests on all the backends.
+
+```
+lit -v --param unrarall_backend=7z .
+lit -va --param unrarall_backend=unrar .
+lit -v --param unrarall_backend=7z feature/skip_if_exists_7z.test
+```
 
 == Compatibility ==
 
-This is a bash script and so is fairly unix friendly, however all testing by developers is done on Bash4+. We do however try and maintain Bash3+ compatibility mostly for OS X users who do not want to change their shell.
+This is a bash script and so is fairly unix friendly, however all testing by
+developers is done on Bash4+. We do however try and maintain Bash3+
+compatibility mostly for OS X users who do not want to change their shell.
 
 == Clean up hooks ==
 
-Unrarall provides a modular approach to cleaning up unwanted files by providing clean up hooks. A clean up hook is simply a bash function who's name is of the form "unrarall_clean_<hook>" where "<hook>" is the name of the hook. The hook should have two behaviours.
+Unrarall provides a modular approach to cleaning up unwanted files by providing
+clean up hooks. A clean up hook is simply a bash function who's name is of the
+form "unrarall_clean_<hook>" where "<hook>" is the name of the hook. The hook
+should have two behaviours.
 
-1. Produce help information that informs a user what the hook does. This information is shown when a user uses --help on unrarall.
-2. Perform the clean up. The writer of the hook may assume the current directory is the directory containing the rar files that have just been extracted.
+1. Produce help information that informs a user what the hook does. This
+information is shown when a user uses --help on unrarall.
 
-The user of unararall can choose what hooks they would like to use by specifying the names of the hooks in the --clean= option.
+2. Perform the clean up. The writer of the hook may assume the current
+directory is the directory containing the rar files that have just been
+extracted.
 
-A programmer wishing to add their own hook simply needs to add a hook in the correct section of the unrarall script. 
-Please note that the hook must implement the interface expected by the unrarall script (see source code for details).
-Unrarall will automatically detect the added hook.
+The user of unararall can choose what hooks they would like to use by
+specifying the names of the hooks in the --clean= option.
 
-Alternatively it is possible define unrarall hooks outside the unrarall script as follows.
+A programmer wishing to add their own hook simply needs to add a hook in the
+correct section of the unrarall script.  Please note that the hook must
+implement the interface expected by the unrarall script (see source code for
+details). Unrarall will automatically detect the added hook.
+
+Alternatively it is possible define unrarall hooks outside the unrarall script
+as follows.
 
 1. Define the function .e.g.
 
@@ -34,11 +80,13 @@ function unrarall_clean_dummy_hook()
   echo "This hook doesn't do anything"
 }
 
-so that it is available in the current shell. You can get a list of available functions by running 
+so that it is available in the current shell. You can get a list of available
+functions by running
 
 $ declare -F
 
-2. Export the function so it will be available to sub shells. For example this can be done by running
+2. Export the function so it will be available to sub shells. For example this
+can be done by running
 
 $ declare -fx unrarall_clean_dummy_hook
 
@@ -46,7 +94,8 @@ $ declare -fx unrarall_clean_dummy_hook
 
 $ unrarall --help
 
-Under the list of clean up hooks your newely created hook should be listed along with your hook's help information.
+Under the list of clean up hooks your newely created hook should be listed
+along with your hook's help information.
 
 
 == More ==

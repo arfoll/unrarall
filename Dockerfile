@@ -1,10 +1,10 @@
-FROM ubuntu:16.04
+FROM ubuntu:22.04
 
 # Install
-RUN apt-get update -y
-RUN apt-get install -y python3-pip cfv cksfv p7zip-full p7zip-rar unrar rar git
+RUN apt update -y
+RUN apt install -y python3-pip cksfv p7zip-full p7zip-rar unrar rar git file
 RUN python3 -m pip install --upgrade pip
-RUN python3 -m pip install lit OutputCheck
+RUN python3 -m pip install lit OutputCheck cfv
 
 # Build Preparation
 RUN mkdir -p /src/

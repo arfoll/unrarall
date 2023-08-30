@@ -42,7 +42,7 @@ declare -x UNRARALL_OUTPUT_DIR=""
 declare -ix DEPTH=4
 declare -ix SKIP_IF_EXISTS=0
 declare -ix MV_BACKUP=0 # 0 -> we can use mv -b, 1 -> resort to shenanigans to not clobber when moving
-`mv --help 2>&1 | grep  "\-\-backup" 2>&1 >/dev/null`
+`mv --help 2>&1 | grep  "\--backup" 2>&1 >/dev/null`
 MV_BACKUP=$?
 
 function usage()

@@ -780,7 +780,7 @@ FAIL_COUNT=0
 #modify IFS for new lines so filenames with spaces do not get split
 IFS_TEMP=$IFS
 IFS=$(echo -en "\n\b")
-MATCHRARMIME='x-rar'
+MATCHRARMIME='vnd.rar'
 
 if [ "$CKSFV" -eq 1 ]; then
   if ! type -P cksfv 2>&1 > /dev/null ; then

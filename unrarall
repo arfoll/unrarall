@@ -780,7 +780,8 @@ FAIL_COUNT=0
 #modify IFS for new lines so filenames with spaces do not get split
 IFS_TEMP=$IFS
 IFS=$(echo -en "\n\b")
-MATCHRARMIME='vnd.rar'
+# Match application/x-rar and the newer (file > 5.45) application/vnd.rar type
+MATCHRARMIME='^application\/(vnd\.rar|x-rar)$'
 
 if [ "$CKSFV" -eq 1 ]; then
   if ! type -P cksfv 2>&1 > /dev/null ; then
@@ -814,7 +815,7 @@ for file in $(find_wrapper "$DIR" -depth -iregex '.*\.(rar|001)$'); do
   fi
 
   # check file really is a rar file
-  if [[ ! "`file --mime "${file}"`" =~ $MATCHRARMIME ]]; then
+  if [[ ! "`file --mime-type -b "${file}"`" =~ $MATCHRARMIME ]]; then
     message error "Skipping file \"${file}\" because it does not appear to be a valid rar file."
     # Treat this as a failure so we exit with a non zero exit code
     let FAIL_COUNT=FAIL_COUNT+1
